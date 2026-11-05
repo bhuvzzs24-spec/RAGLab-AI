@@ -1,0 +1,51 @@
+# Dependencies, virtual environments and generated build output
+node_modules/
+.next/
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*.tsbuildinfo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+# Local work and verification artifacts
+work/
+outputs/
+# Runtime source data, model weights and generated indexes
+data/
+uploads/
+private_uploads/
+models/
+model-cache/
+.cache/
+*.sqlite*
+*.db
+*.db-wal
+*.db-shm
+*.faiss
+*.npy
+*.npz
+*.safetensors
+*.pt
+*.pth
+*.onnx
+# Secrets: only the documented example is tracked
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+# Host/editor noise
+.DS_Store
+.idea/
+.vscode/
+*.log
+
+# Browser test output and additional model caches
+test-results/
+playwright-report/
+*.bin

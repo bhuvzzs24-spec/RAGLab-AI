@@ -1,0 +1,54 @@
+name: RAGLab checks
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      real_benchmark:
+        type: boolean
+        default: false
+        description: Run the real-model 18-configuration CC0 benchmark
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      HF_HOME: ${{ runner.temp }}/raglab-models
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: apps/api/requirements.txt
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '20'
+          cache: npm
+      - run: pip install -r apps/api/requirements.txt
+      - run: pytest apps/api/tests -q
+      - run: npm ci
+      - run: npm run build
+      - run: npm run typecheck
+      - name: Optional real-model benchmark
+        if: github.event_name == 'workflow_dispatch' && inputs.real_benchmark
+        env:
+          HF_HOME: ${{ runner.temp }}/raglab-models
+        run: python apps/api/scripts/smoke_benchmark.py --output work/benchmark-evidence.json
+      - name: Install Chromium for real browser smoke
+        if: github.event_name == 'workflow_dispatch' && inputs.real_benchmark
+        run: npx playwright install --with-deps chromium
+      - name: Real desktop/mobile browser smoke
+        if: github.event_name == 'workflow_dispatch' && inputs.real_benchmark
+        env:
+          RAGLAB_PYTHON: python3
+        run: npm run test:e2e
+      - name: Save optional benchmark evidence
+        if: github.event_name == 'workflow_dispatch' && inputs.real_benchmark
+        uses: actions/upload-artifact@v7
+        with:
+          name: benchmark-evidence
+          path: work/benchmark-evidence.*

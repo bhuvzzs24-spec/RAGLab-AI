@@ -1,0 +1,8 @@
+'use client';
+import {ResponsiveContainer,ScatterChart,Scatter,CartesianGrid,XAxis,YAxis,Tooltip,Legend} from 'recharts';
+import type {Projection,Point} from './pipeline-types';
+const colors=['#14adbb','#f58061','#779e26','#3b82f6','#ed9d2d'];
+export default function VectorChart({projection,onPoint}:{projection:Projection;onPoint:(point:Point)=>void}){
+ const names=Array.from(new Set(projection.points.map(p=>p.document_id)));
+ return <div className="vector-chart" role="img" aria-label={`PCA projection of ${projection.sampled} real embedding vectors. Select a source passage below for a keyboard-accessible alternative.`}><ResponsiveContainer width="100%" height={320}><ScatterChart margin={{top:15,right:20,bottom:15,left:0}}><CartesianGrid strokeDasharray="3 5" stroke="#c7d8dc60"/><XAxis type="number" dataKey="x" name="PC1" tick={{fontSize:10,fill:'#80929d'}}/><YAxis type="number" dataKey="y" name="PC2" tick={{fontSize:10,fill:'#80929d'}}/><Tooltip cursor={{strokeDasharray:'3 3'}} content={({active,payload})=>active&&payload?.length?<div className="plot-tooltip"><strong>{payload[0].payload.source_name}</strong><p>Passage {payload[0].payload.ordinal+1} · page {payload[0].payload.page_numbers.join(', ')} · {payload[0].payload.tokens} model tokens</p></div>:null}/><Legend wrapperStyle={{fontSize:10}}/>{names.map((id,i)=><Scatter key={id} name={projection.points.find(p=>p.document_id===id)?.source_name} data={projection.points.filter(p=>p.document_id===id)} fill={colors[i%colors.length]} isAnimationActive={false} onClick={entry=>onPoint(entry as Point)}/>)}</ScatterChart></ResponsiveContainer></div>
+}
