@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      HF_HOME: ${{ runner.temp }}/raglab-models
+      HF_HOME: /tmp/raglab-models
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -36,7 +36,7 @@ jobs:
       - name: Optional real-model benchmark
         if: github.event_name == 'workflow_dispatch' && inputs.real_benchmark
         env:
-          HF_HOME: ${{ runner.temp }}/raglab-models
+          HF_HOME: /tmp/raglab-models
         run: python apps/api/scripts/smoke_benchmark.py --output work/benchmark-evidence.json
       - name: Install Chromium for real browser smoke
         if: github.event_name == 'workflow_dispatch' && inputs.real_benchmark
