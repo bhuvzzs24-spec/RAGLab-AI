@@ -1,5 +1,5 @@
 # Dependencies, virtual environments and generated build output
-node_modules/
+node_modules
 .next/
 .venv/
 venv/

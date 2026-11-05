@@ -40,16 +40,20 @@ with connect() as db:
 engine = Engine(connect, DATA)
 dataset_store = DatasetStore(connect)
 benchmark_service = BenchmarkService(connect, engine, dataset_store)
+from adaptive import AdaptiveService, router as adaptive_router
+adaptive_service = AdaptiveService(connect, benchmark_service, dataset_store)
 
 @asynccontextmanager
 async def lifespan(app):
     yield
+    adaptive_service.shutdown()
     benchmark_service.shutdown()
     engine.shutdown()
 
 app = FastAPI(title='RAGLab API', lifespan=lifespan)
 app.include_router(dataset_router(dataset_store))
 app.include_router(benchmark_router(benchmark_service))
+app.include_router(adaptive_router(adaptive_service))
 app.add_middleware(CORSMiddleware, allow_origins=os.getenv('CORS_ORIGINS','http://localhost:3000').split(','), allow_methods=['*'], allow_headers=['*'])
 
 def encode(texts):

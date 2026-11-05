@@ -62,3 +62,8 @@ Only completed configurations from one immutable dataset snapshot and one fixed 
 - Balanced objective = `0.70 × accuracy_score + 0.30 × speed_score`.
 
 Weights are disclosed heuristics, not learned universal utility. Indexing times are reported but excluded from speed ranking because embedding-cache conditions vary. Recommendations include their inputs and unique-question sample size. Provisional annotations, a tiny corpus, timing variability, lack of held-out queries, and absence of statistical significance all limit conclusions. A top-ranked sample configuration is not a claim of general superiority.
+
+
+## Phase 4 adaptive evaluation
+
+See [PHASE4.md](PHASE4.md) for split isolation, held-out reservation, normalized objective weights, Pareto dominance, question-cluster bootstrap construction and repeatability limitations. The original Phase 3 descriptive leaderboard formula remains compatible. Adaptive search chooses from validation only and runs one frozen configuration on reserved test; test results cannot enter the adaptive analysis endpoint.

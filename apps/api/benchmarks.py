@@ -33,6 +33,7 @@ class RunInput(BaseModel):
     include_unreviewed:bool=False
     generate_answers:bool=False
     rebuild_indexes:bool=True
+    evaluation_split:Literal['all','train','validation','test']='all'
     @model_validator(mode='after')
     def valid(self):
         if len(set(self.budgets))!=3 or any(b<8 or b>2048 for b in self.budgets):raise ValueError('Choose exactly three distinct word budgets between 8 and 2048.')
@@ -116,13 +117,14 @@ class BenchmarkService:
             body={k:v for k,v in snapshot.items() if k!='fingerprint'}
             if sha(json.dumps(body,sort_keys=True))!=snapshot['fingerprint']:raise HTTPException(409,'Dataset snapshot integrity check failed.')
 
-    def start(self,settings,asynchronous=True):
-        snapshot=self.datasets.snapshot(settings.dataset_id,settings.include_unreviewed)
+    def start(self,settings,asynchronous=True,*,snapshot_override=None,configs_override=None,provenance=None):
+        snapshot=snapshot_override or self.datasets.snapshot(settings.dataset_id,settings.include_unreviewed,settings.evaluation_split)
         if len(snapshot['questions'])>100:raise HTTPException(422,'Use at most 100 included questions per local benchmark run. Split larger datasets.')
         if settings.generate_answers and not public_configuration()['configured']:raise HTTPException(422,'LLM credentials/model are not configured. Disable answer generation; retrieval benchmarks work locally.')
         metadata={**settings.model_dump(),'model_registry':embeddings.MODELS,'evaluation_version':METHOD_VERSION,
                   'timing_mode':'one excluded query warm-up per config; shuffled seeded config/question order',
                   'runtime':{'python':platform.python_version(),'system':platform.system(),'machine':platform.machine()}}
+        metadata['adaptive_provenance']=provenance
         metadata['packages']={}
         for package in ['sentence-transformers','faiss-cpu','numpy','torch']:
             try:metadata['packages'][package]=version(package)
@@ -131,7 +133,7 @@ class BenchmarkService:
         with self.connect() as db:
             db.execute('INSERT INTO benchmark_runs(id,dataset_id,name,snapshot,settings,status,phase) VALUES(?,?,?,?,?,?,?)',
                        (id,settings.dataset_id,settings.name.strip(),json.dumps(snapshot),json.dumps(metadata),'queued','Waiting for benchmark worker'))
-            for ordinal,config in enumerate(grid(settings)):
+            for ordinal,config in enumerate(configs_override if configs_override is not None else grid(settings)):
                 db.execute('INSERT INTO benchmark_configs(id,run_id,ordinal,config) VALUES(?,?,?,?)',(str(uuid4()),id,ordinal,json.dumps(config)))
         if asynchronous:self.executor.submit(self.execute,id)
         else:self.execute(id)
@@ -256,7 +258,9 @@ class BenchmarkService:
         if strategy:configs=[c for c in configs if c['config']['strategy']==strategy]
         try:ranked=optimize(configs,objective)
         except ValueError as exc:raise HTTPException(422,str(exc))
-        return {'run_id':id,'dataset_fingerprint':run['snapshot']['fingerprint'],'provisional':run['snapshot']['provisional'],
+        from adaptive import analyse
+        analysis=analyse(run,self.measurements(id))
+        return {'analysis':analysis,'run_id':id,'dataset_fingerprint':run['snapshot']['fingerprint'],'provisional':run['snapshot']['provisional'],
                 'objective':objective,'ranked':ranked,'methodology':{
                     'accuracy':'0.45 × Recall@k + 0.35 × MRR + 0.20 × Precision@k',
                     'speed':'1 - (mean latency - cohort minimum) / (cohort maximum - cohort minimum); 1 if equal.',
@@ -269,7 +273,10 @@ class BenchmarkService:
         if format=='json':
             body={**run,'measurements':self.measurements(id),'leaderboard':self.leaderboard(id)}
             return Response(json.dumps(body,indent=2),media_type='application/json',headers={'Content-Disposition':'attachment; filename="raglab-benchmark.json"'})
-        if format!='csv':raise HTTPException(422,'Choose csv or json.')
+        if format=='pdf':
+            from reports import benchmark_pdf
+            return Response(benchmark_pdf(run,self.measurements(id)),media_type='application/pdf',headers={'Content-Disposition':'attachment; filename="raglab-report.pdf"'})
+        if format!='csv':raise HTTPException(422,'Choose csv, json or pdf.')
         configs={c['id']:c for c in run['configs']}
         out=io.StringIO();fields=['run_id','dataset_fingerprint','provisional','config_id','model_id','model_revision','strategy','budget','top_k','repetition','question_id','answerability','human_reviewed',
             'precision_at_k','recall_at_k','mrr','evidence_coverage','latency_ms','wall_latency_ms','indexing_time_ms','index_cache_reused','cache_hits','answer_exact_match','groundedness','generation_status']

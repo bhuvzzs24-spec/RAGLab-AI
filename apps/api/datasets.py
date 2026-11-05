@@ -33,6 +33,8 @@ class QuestionInput(BaseModel):
     human_reviewed:bool=False
     reviewer:str=Field('',max_length=100)
     review_notes:str=Field('',max_length=2000)
+    split:Literal['unassigned','train','validation','test']='unassigned'
+    group_id:str=Field('',max_length=120)
     annotation_origin:str=Field('user',max_length=50)
 
 class DatasetInput(BaseModel):
@@ -122,9 +124,10 @@ class DatasetStore:
         with self.connect() as db:ids=[r[0] for r in db.execute('SELECT id FROM benchmark_datasets ORDER BY updated DESC,rowid DESC')]
         return [{k:v for k,v in self.get(id).items() if k!='questions'} for id in ids]
 
-    def snapshot(self,id,include_unreviewed=False):
+    def snapshot(self,id,include_unreviewed=False,split='all'):
+        if split not in ('all','train','validation','test'):raise HTTPException(422,'Invalid evaluation split.')
         data=self.get(id)
-        questions=[q for q in data['questions'] if q['answerability']!='unknown' and (q['human_reviewed'] or include_unreviewed)]
+        questions=[q for q in data['questions'] if q['answerability']!='unknown' and (q['human_reviewed'] or include_unreviewed) and (split=='all' or q.get('split','unassigned')==split)]
         if not questions or not any(q['answerability']=='answerable' for q in questions):raise HTTPException(422,'Review at least one answerable question with reference/evidence, or explicitly include provisional annotations.')
         for q in questions:
             if q['answerability']=='answerable' and (not q['relevant_spans'] or not q['reference_answers']):raise HTTPException(422,'Every included answerable question needs reference answers and relevant source spans.')
@@ -137,7 +140,7 @@ class DatasetStore:
                 if hashes.get(e['document_id'])!=e['source_sha256']:raise HTTPException(409,'Evidence source changed. Review the dataset before benchmarking.')
         snapshot={'dataset_id':data['id'],'name':data['name'],'revision':data['revision'],'sample':data['sample'],
                   'document_ids':data['document_ids'],'sources':sources,'questions':questions,
-                  'include_unreviewed':include_unreviewed,'provisional':any(not q['human_reviewed'] for q in questions),
+                  'split':split,'include_unreviewed':include_unreviewed,'provisional':any(not q['human_reviewed'] for q in questions),
                   'reviewed_questions':sum(q['human_reviewed'] for q in questions),'excluded_questions':len(data['questions'])-len(questions)}
         snapshot['fingerprint']=sha(json.dumps(snapshot,sort_keys=True))
         return snapshot
@@ -161,10 +164,11 @@ class DatasetStore:
                         grouped[id]={'id':id,'question':row['question'],'reference_answer':row.get('reference_answer',''),
                             'reference_answers':json.loads(row.get('reference_answers') or '[]'),'answerability':row.get('answerability') or 'answerable',
                             'human_reviewed':reviewed in ('true','1'),'reviewer':row.get('reviewer',''),'review_notes':row.get('review_notes',''),
+                            'split':row.get('split') or 'unassigned','group_id':row.get('group_id') or '',
                             'annotation_origin':'import','relevant_spans':[]}
                     else:
                         expected=grouped[id]
-                        check={'question':row['question'],'reference_answer':row.get('reference_answer',''),
+                        check={'split':row.get('split') or 'unassigned','group_id':row.get('group_id') or '', 'question':row['question'],'reference_answer':row.get('reference_answer',''),
                                'reference_answers':json.loads(row.get('reference_answers') or '[]'),
                                'answerability':row.get('answerability') or 'answerable',
                                'reviewer':row.get('reviewer',''),'review_notes':row.get('review_notes','')}
@@ -183,28 +187,28 @@ class DatasetStore:
         except HTTPException:raise
         except Exception as exc:raise HTTPException(422,'Dataset import failed: '+str(exc)[:300])
 
-    def sample(self):
+    def sample(self,adaptive=False):
         directory=Path(__file__).parent/'samples'
         document_ids=[]
         with self.connect() as db:
-            for filename in ['campus-guide.txt','retrieval-notes.md']:
+            for filename in (['adaptive-campus.txt'] if adaptive else ['campus-guide.txt','retrieval-notes.md']):
                 text=(directory/filename).read_text()
                 match=db.execute('SELECT id FROM documents WHERE name=? AND text=?',(filename,text)).fetchone()
                 id=match['id'] if match else str(uuid4())
                 if not match:db.execute('INSERT INTO documents(id,name,text,pages,bytes) VALUES(?,?,?,?,?)',(id,filename,text,json.dumps([text]),len(text.encode())))
                 document_ids.append(id)
-        template=json.loads((directory/'benchmark-sample.json').read_text())
+        template=json.loads((directory/('adaptive-sample.json' if adaptive else 'benchmark-sample.json')).read_text())
         return self.save(DatasetInput(**{**template,'document_ids':document_ids}))
 
     def export(self,id,format):
         data=self.get(id)
         if format=='json':return Response(json.dumps(data,indent=2),media_type='application/json',headers={'Content-Disposition':'attachment; filename="raglab-dataset.json"'})
         if format!='csv':raise HTTPException(422,'Choose csv or json.')
-        out=io.StringIO();fields=['question_id','question','reference_answer','reference_answers','answerability','human_reviewed','reviewer','review_notes','document_id','document_name','start','end','quote','source_sha256']
+        out=io.StringIO();fields=['question_id','question','reference_answer','reference_answers','split','group_id','answerability','human_reviewed','reviewer','review_notes','document_id','document_name','start','end','quote','source_sha256']
         writer=csv.DictWriter(out,fieldnames=fields);writer.writeheader()
         for q in data['questions']:
             for span in q['relevant_spans'] or [{}]:
-                writer.writerow({'question_id':q['id'],**{k:q.get(k,'') for k in ['question','reference_answer','answerability','reviewer','review_notes']},
+                writer.writerow({'question_id':q['id'],**{k:q.get(k,'') for k in ['question','reference_answer','split','group_id','answerability','reviewer','review_notes']},
                     'reference_answers':json.dumps(q['reference_answers']),'human_reviewed':str(q['human_reviewed']).lower(),
                     **{k:span.get(k,'') for k in ['document_id','document_name','start','end','quote','source_sha256']}})
         return Response(out.getvalue(),media_type='text/csv',headers={'Content-Disposition':'attachment; filename="raglab-dataset.csv"'})
@@ -218,6 +222,8 @@ def router(store):
     def create_dataset(data:DatasetInput):return store.save(data)
     @routes.post('/sample',status_code=201)
     def sample_dataset():return store.sample()
+    @routes.post('/sample/adaptive',status_code=201)
+    def adaptive_sample():return store.sample(adaptive=True)
     @routes.post('/import',status_code=201)
     async def import_dataset(file:UploadFile,name:str=Form(''),document_ids:str=Form('[]')):
         raw=await file.read(2*1024*1024+1)
@@ -231,6 +237,57 @@ def router(store):
     @routes.put('/{id}')
     def update_dataset(id:str,data:DatasetInput):
         store.get(id);return store.save(data,id)
+    @routes.post('/{id}/split')
+    def split_dataset(id:str,data:SplitInput):
+        return assign_splits(store,id,data)
     @routes.get('/{id}/export')
     def export_dataset(id:str,format:str='json'):return store.export(id,format)
     return routes
+
+
+class SplitInput(BaseModel):
+    expected_revision:int
+    seed:int=Field(7,ge=0,le=2**31-1)
+
+
+def evidence_groups(questions):
+    """Connected components: explicit groups, duplicate questions and overlapping evidence."""
+    from evaluation import normalize_answer
+    parents=list(range(len(questions)))
+    def root(i):
+        while parents[i]!=i:
+            parents[i]=parents[parents[i]];i=parents[i]
+        return i
+    for i,a in enumerate(questions):
+        for j in range(i):
+            b=questions[j]
+            shared_group=bool(a.get('group_id')) and a.get('group_id')==b.get('group_id')
+            duplicate=normalize_answer(a['question'])==normalize_answer(b['question'])
+            overlap=any(x['document_id']==y['document_id'] and max(x['start'],y['start'])<min(x['end'],y['end']) for x in a['relevant_spans'] for y in b['relevant_spans'])
+            if shared_group or duplicate or overlap:parents[root(i)]=root(j)
+    groups={}
+    for i,q in enumerate(questions):groups.setdefault(root(i),[]).append(q)
+    return list(groups.values())
+
+
+def validate_split_isolation(questions):
+    for group in evidence_groups(questions):
+        splits={q.get('split','unassigned') for q in group}-{ 'unassigned' }
+        if len(splits)>1:raise HTTPException(422,'Leakage risk: duplicate questions, overlapping evidence or an explicit group cross split boundaries. Assign the whole group to one split.')
+
+
+def assign_splits(store,id,data):
+    import random
+    current=store.get(id)
+    if current['revision']!=data.expected_revision:raise HTTPException(409,'Dataset revision changed. Reload before splitting.')
+    groups=evidence_groups(current['questions'])
+    if len(groups)<3:raise HTTPException(422,'Need at least three independent evidence/question groups for train, validation and test. Add independent questions first.')
+    groups.sort(key=lambda g:sorted(q['id'] for q in g))
+    random.Random(data.seed).shuffle(groups)
+    # Approximately 60/20/20, ensuring each partition has at least one group.
+    n=len(groups);n_test=max(1,round(n*.2));n_val=max(1,round(n*.2))
+    for i,group in enumerate(groups):
+        split='test' if i<n_test else ('validation' if i<n_test+n_val else 'train')
+        for q in group:q['split']=split
+    validate_split_isolation(current['questions'])
+    return store.save(DatasetInput(**{**current,'expected_revision':data.expected_revision}),id)

@@ -51,3 +51,25 @@ Failures retain actionable state and remain excluded from ranking. Null means un
 ## Deployment boundary
 
 This is a local, single-user research application. Use one FastAPI worker. Authentication, tenancy, distributed scheduling, OCR and production secrets management are Phase 4/deployment concerns. Optional generation sends the question and retrieved excerpts to the configured provider; local retrieval and benchmarking do not require external API credentials.
+
+
+## Phase 4 extension
+
+```mermaid
+flowchart LR
+    Review[Evidence review + group-safe splits] --> Frozen[Immutable dataset snapshots]
+    Frozen --> Train[Train: manual development]
+    Frozen --> Val[Validation: 18 real configurations]
+    Val --> Objective[Quality weights + latency constraint]
+    Objective --> Pareto[Pareto frontier + bootstrap uncertainty]
+    Pareto --> Seal[Frozen selection SHA256]
+    Frozen --> Reserved[Reserved test questions]
+    Seal --> Test[One selected configuration]
+    Reserved --> Test
+    Test --> Report[Actual PDF / CSV / JSON reports]
+    DB[(SQLite job and measurement persistence)] --- Val
+    DB --- Seal
+    DB --- Test
+```
+
+Adaptive orchestration has its own single-thread executor; it waits on the existing benchmark executor, which delegates indexing to the existing index executor. This avoids a job waiting for itself. Cancellation is cooperative. SQLite adds `adaptive_searches` and unique `adaptive_test_reservations`; existing tables and artifacts remain in place. Dataset split/group fields live inside the existing question JSON, with legacy questions treated as unassigned. Search snapshots and selected-config seals are immutable provenance. Restart marks in-flight jobs interrupted; resume checks original sources and pinned model registry. PDF generation uses local ReportLab vector graphics over persisted measurements.

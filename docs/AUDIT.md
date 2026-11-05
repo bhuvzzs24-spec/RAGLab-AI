@@ -20,3 +20,13 @@ The complete tested source is restored to the original working directory, with d
 ## Preservation checks
 
 The expanded suite covers the original behavior and Phase 3. Real-model matrix execution uses the existing indexing/retrieval engine. Browser tests verify the original Playground and exact-source highlight dialog alongside new dataset/benchmark pages. See [VERIFICATION.md](VERIFICATION.md) for actual counts, execution evidence, limitations and publishing status.
+
+## Phase 4 continuation audit
+
+The remote `main` history (`107e5e3`, `480f1b7`) and the entire Phase 3 source were inspected before extension. The original Documents/Chunking/Embeddings/Experiments/Leaderboard/Playground/Reports/Settings/Overview navigation remains, with the existing Datasets and Benchmarks additions. MiniLM/BGE formatting, normalization, pinned revisions, 384d vectors, separate persistent FAISS artifacts, source pages/offsets, embedding-cache identity and cooperative index cancellation were retained. No runtime database, private upload, model cache or generated index was reset.
+
+The Phase 3 optimizer provided point estimates on one run; there was no held-out search, explicit split/group field, uncertainty interval, reserved-test protection or PDF report. Phase 4 adds those through the existing dataset/benchmark services and additive SQLite tables. Existing historical snapshots and the default 18-config grid remain compatible. A browser test also found that the chunking source selector needed an explicit accessible name; that label is now unambiguous.
+
+Verified safeguards include source/snapshot/model/seal checks, no selection from incomplete jobs or test analysis, cancellation before held-out launch, restart/resume, unique test reservations across dataset reimports, actual timing/cache metadata and unavailable generation metrics staying null. Data integrity is checked on disposable real-model runs. Previously existing private runtime artifacts are preserved in place; this audit does not claim to have validated private cloud-only file contents.
+
+Remaining boundaries: local single API process, no OCR or multi-user access control, tiny unreviewed sample evidence, no universal semantic-duplicate detector, no credentialed live generation run, no calibrated semantic correctness/groundedness evaluator, and no executed Docker/cloud deployment. The report and demonstration guides explicitly describe these boundaries.

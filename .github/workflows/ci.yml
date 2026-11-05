@@ -23,12 +23,12 @@ jobs:
         with:
           python-version: '3.12'
           cache: pip
-          cache-dependency-path: apps/api/requirements.txt
+          cache-dependency-path: apps/api/requirements.lock.txt
       - uses: actions/setup-node@v7
         with:
           node-version: '20'
           cache: npm
-      - run: pip install -r apps/api/requirements.txt
+      - run: pip install -r apps/api/requirements.txt -c apps/api/requirements.lock.txt
       - run: pytest apps/api/tests -q
       - run: npm ci
       - run: npm run build
@@ -38,6 +38,9 @@ jobs:
         env:
           HF_HOME: /tmp/raglab-models
         run: python apps/api/scripts/smoke_benchmark.py --output work/benchmark-evidence.json
+      - name: Optional real adaptive held-out evaluation
+        if: github.event_name == 'workflow_dispatch' && inputs.real_benchmark
+        run: python apps/api/scripts/smoke_adaptive.py --output work/adaptive-evidence.json --pdf work/adaptive-report.pdf
       - name: Install Chromium for real browser smoke
         if: github.event_name == 'workflow_dispatch' && inputs.real_benchmark
         run: npx playwright install --with-deps chromium
@@ -51,4 +54,8 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: benchmark-evidence
-          path: work/benchmark-evidence.*
+          path: |
+            work/benchmark-evidence.*
+            work/adaptive-evidence.*
+            work/adaptive-report.pdf
+            work/browser-results.json

@@ -1,0 +1,33 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    init: true
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      LLM_API_BASE: ${LLM_API_BASE:-https://api.openai.com/v1}
+      LLM_MODEL: ${LLM_MODEL:-}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_REQUIRE_KEY: ${LLM_REQUIRE_KEY:-true}
+      CORS_ORIGINS: http://localhost:3000
+    volumes:
+      - raglab-data:/data
+      - raglab-models:/models
+    stop_grace_period: 90s
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        API_URL: http://api:8000
+    init: true
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+volumes:
+  raglab-data:
+  raglab-models:

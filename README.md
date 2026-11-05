@@ -1,4 +1,13 @@
-# RAGLab
+# RAGLab AI - Adaptive RAG Benchmarking & Optimization
+
+**Phase 4 extends the existing Phases 1-3.** Validation-only automatic search, configurable accuracy/latency objectives, Pareto analysis, frozen one-config held-out evaluation, split-aware evidence review, uncertainty/repeatability reporting and actual PDF/CSV/JSON reports are implemented. All supplied sample labels remain unreviewed; missing LLM credentials produce honest retrieval-only behavior.
+
+- [Phase 4 workflow and API](docs/PHASE4.md)
+- [Final verification evidence](docs/PHASE4_VERIFICATION.md)
+- [Reproducible native setup, Compose and hosting boundaries](docs/DEPLOYMENT.md)
+- [Faculty demonstration guide](docs/FACULTY_DEMO.md)
+- [IEEE mini-project report guide](docs/IEEE_REPORT_GUIDE.md)
+
 
 **Phases 1–3 are included in this repository.** Phase 3 adds CSV/JSON datasets, explicit human-review attestations and source evidence, repeatable 18-configuration benchmarks, real Precision@k/Recall@k/MRR and timing measurements, run recovery, measured charts/heatmaps, ranked comparisons, an explainable optimizer, and CSV/JSON exports. Retrieval benchmarking needs no external API key. The included CC0 judgments are unreviewed examples, and all resulting sample recommendations are provisional.
 
@@ -12,13 +21,13 @@ A local-first RAG benchmarking and optimization studio for university research. 
 
 ## Setup
 
-Requires Node.js 20+, Python 3.11–3.13, and internet for package installation and the first model downloads. Allow several GB for Torch, both embedding models, and index storage.
+Requires Node.js 20+, Python 3.12–3.13, and internet for package installation and the first model downloads. Allow several GB for Torch, both embedding models, and index storage.
 
 ```sh
 npm ci
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r apps/api/requirements.txt
+pip install -r apps/api/requirements.txt -c apps/api/requirements.lock.txt
 cp .env.example apps/web/.env.local
 ```
 
@@ -39,7 +48,7 @@ Open http://localhost:3000. API documentation: http://localhost:8000/docs. Produ
 
 Next.js proxies `/api/*` to `API_URL` (default `http://127.0.0.1:8000`). Python does **not** read Next.js's `.env.local`: export backend variables in the API terminal. To load the root example manually after filling it in, use `set -a; source .env; set +a` with a local `.env` copy. Never commit credentials. The root `.env` and frontend `.env.local` are ignored.
 
-SQLite lives at `./data/raglab.sqlite3`, relative to the API working directory; use a stable working directory or an absolute `RAGLAB_DATA_DIR`. FAISS binaries and normalized vectors live under `data/indexes/<index-id>/`. `package-lock.json` locks frontend dependencies; `apps/api/requirements.lock.txt` records the tested macOS Python environment (cross-platform installations should use `requirements.txt`).
+SQLite lives at `./data/raglab.sqlite3`, relative to the API working directory; use a stable working directory or an absolute `RAGLAB_DATA_DIR`. FAISS binaries and normalized vectors live under `data/indexes/<index-id>/`. `package-lock.json` locks frontend dependencies; `apps/api/requirements.lock.txt` constrains the tested Python dependency versions; Linux Python 3.12 is checked in CI. Binary wheel availability is platform-dependent.
 
 ## First retrieval and RAG run
 
