@@ -6,5 +6,5 @@ const Tour=dynamic(()=>import('./pipeline-tour'),{loading:()=> <div className="s
 export default function ExperienceDialog({kind,onClose,onTour}:{kind:'intro'|'tour';onClose:()=>void;onTour:()=>void}){
  const ref=useRef<HTMLDialogElement>(null);
  useEffect(()=>{const dialog=ref.current;const old=document.activeElement as HTMLElement|null;dialog?.showModal();const overflow=document.body.style.overflow;document.body.style.overflow='hidden';return()=>{dialog?.close();document.body.style.overflow=overflow;old?.focus()}},[]);
- return <dialog className="experience-dialog" ref={ref} aria-label={kind==='intro'?'RAGLab optional introduction':'Interactive RAG pipeline tour'} onCancel={e=>{e.preventDefault();onClose()}}>{kind==='intro'?<Intro onClose={onClose} onTour={onTour}/>:<Tour onClose={onClose}/>}</dialog>
+ return <dialog className="experience-dialog" ref={ref} aria-label={kind==='intro'?'RAGLab optional introduction':'Interactive RAG pipeline tour'} onCancel={e=>{e.preventDefault();onClose()}}>{kind==='intro'?<Intro onClose={onClose} onTour={onTour}/>:<Tour onClose={onClose} scrollContainer={ref}/>}</dialog>
 }
