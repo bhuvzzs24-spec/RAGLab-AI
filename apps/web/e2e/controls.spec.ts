@@ -3,7 +3,7 @@ import {readFile} from 'node:fs/promises';
 
 test('theme survives navigation and New experiment opens the working lab',async({page})=>{
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
- await page.goto('/');const toggle=page.getByRole('button',{name:'Toggle color theme',exact:true});await expect(toggle).toBeVisible();
+ await page.goto('/overview');const toggle=page.getByRole('button',{name:'Toggle color theme',exact:true});await expect(toggle).toBeVisible();
  const wasDark=await toggle.getAttribute('aria-pressed');await toggle.click();await expect(toggle).toHaveAttribute('aria-pressed',wasDark==='true'?'false':'true');
  await page.getByRole('link',{name:'New experiment',exact:true}).click();await expect(page).toHaveURL(/\/chunking$/);await expect(page.getByRole('button',{name:'Toggle color theme',exact:true})).toHaveAttribute('aria-pressed',wasDark==='true'?'false':'true');
  await page.reload();await expect(page.getByRole('button',{name:'Toggle color theme',exact:true})).toHaveAttribute('aria-pressed',wasDark==='true'?'false':'true');
@@ -75,7 +75,7 @@ test('build index, inspect and rebuild use real persistent jobs',async({page,req
 
 test('tour motion follows native scrolling and switches off for reduced motion',async({page,request})=>{
  const settings=await (await request.get('/api/settings')).json();await request.put('/api/settings',{data:{...settings,motion:'system'}});
- await page.emulateMedia({reducedMotion:'no-preference'});await page.goto('/');await page.getByRole('button',{name:'Launch pipeline tour',exact:true}).click();
+ await page.emulateMedia({reducedMotion:'no-preference'});await page.goto('/overview');await page.getByRole('button',{name:'Launch pipeline tour',exact:true}).click();
  const dialog=page.getByRole('dialog',{name:'Interactive RAG pipeline tour',exact:true});const step=dialog.locator('#tour-step-0');await expect(step).toBeVisible();
  const initial=await step.evaluate(e=>getComputedStyle(e).transform);await dialog.hover({position:{x:150,y:300}});await page.mouse.wheel(0,700);
  await expect.poll(()=>dialog.evaluate(e=>e.scrollTop)).toBeGreaterThan(100);await expect.poll(()=>step.evaluate(e=>getComputedStyle(e).transform)).not.toBe(initial);

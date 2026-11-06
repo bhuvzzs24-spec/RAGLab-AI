@@ -191,3 +191,7 @@ RAGLAB_PYTHON="$PWD/.venv/bin/python" npm run test:e2e
 Browser tests cover desktop/mobile dataset review validation, all 18 real configurations, cancellation/resume, measured heatmaps/filters/optimization/CSV export, and preservation of Phase 2 retrieval/source highlighting. They use `work/e2e-data` and never require LLM credentials. `HF_HOME` can point to an existing model cache. Set `RAGLAB_E2E_DATA_DIR` for another disposable location. Normal API development should still use one worker.
 
 GitHub Actions runs backend tests, the production build and TypeScript on pushes/PRs. Its manual `real_benchmark` option additionally runs real local-model benchmarking and browser smoke tests. The environment example contains placeholders only. Do not commit credentials, runtime databases, private documents, generated vectors/indexes, model weights, virtual environments or build/test caches.
+
+### Cinematic entry
+
+Open `/` for the official ThreeUI Halftone Loop landing, or bookmark `/overview` to enter the existing workspace directly. Enter Workspace uses a 780ms desktop / 380ms mobile reveal; Skip Intro and reduced motion navigate immediately. The separate Pipeline Tour remains available. [Source integrity, MIT license and integration notes](docs/THREEUI.md).

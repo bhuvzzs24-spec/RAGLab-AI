@@ -21,7 +21,7 @@ test('explicit evidence decisions persist, revoke approval after edits, and reta
 test('optional intro and native-scroll pipeline tour show real chunks, vectors and retrieval',async({page,request},info)=>{
  const docs=await (await request.get('/api/documents')).json();const source=docs.find((d:{name:string})=>d.name==='campus-guide.txt');expect(source).toBeTruthy();
  const indexes=await (await request.get('/api/indexes')).json();const index=indexes.find((i:{status:string;model_id:string;config:{document_ids:string[]}})=>i.status==='ready'&&i.model_id==='minilm'&&i.config.document_ids.includes(source.id));expect(index).toBeTruthy();
- await page.goto('/');await page.getByRole('button',{name:'Watch the introduction',exact:false}).click();
+ await page.goto('/overview');await page.getByRole('button',{name:'Watch the introduction',exact:false}).click();
  const intro=page.getByRole('dialog',{name:'RAGLab optional introduction',exact:true});await expect(intro).toBeVisible();await expect(intro).toContainText('Conceptual motion only');await intro.getByRole('button',{name:'Next stage',exact:false}).click();await expect(intro).toContainText('Find the boundaries');await intro.getByRole('button',{name:'Skip intro',exact:true}).click();await expect(intro).toHaveCount(0);
  await page.getByRole('button',{name:'Launch pipeline tour',exact:true}).click();const dialog=page.getByRole('dialog',{name:'Interactive RAG pipeline tour',exact:true});await expect(dialog).toBeVisible();
  await dialog.getByRole('combobox',{name:'Tour document',exact:true}).selectOption(source.id);
@@ -58,21 +58,21 @@ test('real repeated runs compare stored measurements and research scope excludes
 
 test('all eleven pages pass automated WCAG A/AA checks and responsive bounds',async({page},info)=>{
  const failures:{route:string;theme:string;violations:unknown[]}[]=[];
- for(const route of ['/','/documents','/chunking','/embeddings','/datasets','/benchmarks','/experiments','/leaderboard','/playground','/reports','/settings']){
+ for(const route of ['/overview','/documents','/chunking','/embeddings','/datasets','/benchmarks','/experiments','/leaderboard','/playground','/reports','/settings']){
   await page.goto(route);await expect(page.locator('h1')).toBeVisible();await expect(page.locator('.header-right .status')).toContainText('API connected');await expect(page.locator('.skeleton-grid')).toHaveCount(0);await expect(page.locator('.alert[role=alert]')).toHaveCount(0);
   if(route==='/benchmarks'||route==='/leaderboard'||route==='/reports')await expect(page.locator('.run-progress')).toBeVisible();
   if(route==='/')await expect(page.locator('.research-kpis')).toBeVisible();
-  if(['/','/documents','/embeddings','/datasets','/reports','/settings'].includes(route))await page.screenshot({path:`work/page-${route==='/'?'overview':route.slice(1)}-${info.project.name}.png`,fullPage:true});
+  if(['/overview','/documents','/embeddings','/datasets','/reports','/settings'].includes(route))await page.screenshot({path:`work/page-${route==='/'?'overview':route.slice(1)}-${info.project.name}.png`,fullPage:true});
   const r=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa','wcag22aa']).analyze();if(r.violations.length)failures.push({route,theme:'light',violations:r.violations.map(v=>({id:v.id,nodes:v.nodes.map(n=>({target:n.target,summary:n.failureSummary}))}))});
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),route).toBe(true);
  }
- await page.goto('/');await page.getByRole('button',{name:'Toggle color theme',exact:true}).click();await expect(page.locator('.studio')).toHaveClass(/dark/);const dark=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();if(dark.violations.length)failures.push({route:'/',theme:'dark',violations:dark.violations.map(v=>({id:v.id,nodes:v.nodes.map(n=>({target:n.target,summary:n.failureSummary}))}))});
+ await page.goto('/overview');await page.getByRole('button',{name:'Toggle color theme',exact:true}).click();await expect(page.locator('.studio')).toHaveClass(/dark/);const dark=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();if(dark.violations.length)failures.push({route:'/',theme:'dark',violations:dark.violations.map(v=>({id:v.id,nodes:v.nodes.map(n=>({target:n.target,summary:n.failureSummary}))}))});
  await writeFile(`work/a11y-${info.project.name}.json`,JSON.stringify(failures,null,2));expect(failures).toEqual([]);
 });
 
 test('all eleven dark-theme pages retain accessible contrast and responsive bounds',async({page},info)=>{
  const failures:{route:string;violations:unknown[]}[]=[];
- for(const route of ['/','/documents','/chunking','/embeddings','/datasets','/benchmarks','/experiments','/leaderboard','/playground','/reports','/settings']){
+ for(const route of ['/overview','/documents','/chunking','/embeddings','/datasets','/benchmarks','/experiments','/leaderboard','/playground','/reports','/settings']){
   await page.goto(route);await expect(page.locator('.header-right .status')).toContainText('API connected');await expect(page.locator('.skeleton-grid')).toHaveCount(0);
   if(!await page.locator('.studio').evaluate(e=>e.classList.contains('dark')))await page.getByRole('button',{name:'Toggle color theme',exact:true}).click();
   if(route==='/benchmarks'||route==='/leaderboard'||route==='/reports')await expect(page.locator('.run-progress')).toBeVisible();

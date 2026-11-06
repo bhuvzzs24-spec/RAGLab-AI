@@ -95,7 +95,7 @@ test('adaptive search freezes a validation choice, evaluates held-out, downloads
  await expect(page.locator('.benchmark-table tbody tr')).toHaveCount(1);
  await expect(page.getByRole('button',{name:'Analyse selected run',exact:true})).toBeDisabled();
  await page.screenshot({path:`work/adaptive-${testInfo.project.name}.png`,fullPage:true});
- for(const path of ['/','/documents','/chunking','/embeddings','/experiments','/leaderboard','/playground','/reports','/settings']){
+ for(const path of ['/overview','/documents','/chunking','/embeddings','/experiments','/leaderboard','/playground','/reports','/settings']){
   await page.goto(path);await expect(page.locator('h1')).toBeVisible();await expect(page.locator('.alert[role="alert"]')).toHaveCount(0);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1)).toBe(true);
  }

@@ -1,2 +1,2 @@
-import Studio from '../components/studio';
-export default function Page(){return <Studio page="overview"/>}
+import Landing from '../components/landing';
+export default function Page(){return <Landing/>}
