@@ -1,22 +1,26 @@
-# ThreeUI landing integration
+# Continuous Halftone opening
 
-- Official package: `@designcodeio/threeui@1.2.0`; React peer `>=18 <20` matches React 19. Required Three peer is installed and locked. GalleryHeading itself uses Canvas 2D.
-- Official source: https://threeui.com/source-code/gallery-heading.json
-- Reference: https://threeui.com/text-animation/gallery-heading/vertical-loop
-- Canonical `gallery-heading.html` SHA-256, verified against both the registered manifest and the published package: `8e42d2d5b4971bfc4d3c485112c3c51909e20a61b8842bc0dcd8db3ffe2d253a`.
-- MIT, copyright 2026 Meng To. The retained notice is in `docs/licenses/threeui-MIT.txt`. This scene has no registered external assets or licensed media to copy; it uses procedural Canvas artwork and system sans typography.
-- Uses the exact public `@designcodeio/threeui` import, mapped by Next modularizeImports to the documented official `@designcodeio/threeui/components/GalleryHeading` entry point. The root barrel imports unrelated Vite asset modules incompatible with Next's asset pipeline; the official component subpath avoids that graph without modifying the authored implementation.
-- The user explicitly approved the official component's internal `srcDoc` iframe after inspection. It is the package's own sandboxed `allow-scripts` Canvas document, not an embedded ThreeUI website or a video.
-- Configuration: vertical-loop, dark, didone, weight 400, headlineSize 1.25, hue 0, saturation 1, brightness 1. No authored source or interactions were changed.
-- Client-only, lazy-loaded on `/`. Reduced motion loads no animation. Stop, hidden tabs and route departure unmount the iframe, releasing its document/RAF and library listeners. Replay creates a fresh scene. No scroll interception or new animation library.
-- `/overview` is the existing workspace. Workspace links always remain inside it; visiting other pages never forces the landing animation. `/overview?experience=tour` opens the separate existing Pipeline Tour and consumes that parameter.
+## Licensed local customization
 
-## Local API
+GalleryHeading 1.2.0 has no headline-text props. Its vertical-loop strings are hardcoded in the authored Canvas document. This project therefore uses a minimal, explicitly adapted local document, not an overlay over demo wording.
 
-FastAPI runs on `127.0.0.1:8000`; Next proxies `/api/*` to `API_URL` (default `http://127.0.0.1:8000`). Configure API_URL before `npm run build`, since rewrites are built into the production application. Run FastAPI and Next as separate processes; installing dependencies does not start the API. Verify `/api/health` through the frontend. The landing reports health failures and the workspace retains actionable API errors.
+- Upstream registry: https://threeui.com/source-code/gallery-heading.json
+- Canonical HTML SHA-256: `8e42d2d5b4971bfc4d3c485112c3c51909e20a61b8842bc0dcd8db3ffe2d253a`
+- Registered wrapper SHA-256: `fe9856234253bc3c1a13b3afb84f3d84644dfa6d578e7203bb3e1dd5eced1b75`
+- Registered stylesheet SHA-256: `efe4447139f1358dd8e9be68edf6fa46cbefbd1de423a4d6c439ca61d2c8eccf`
+- Original npm package and canonical source remain unchanged. `components/gallery/official-halftone.json` retains an unedited snapshot of the official component's SSR-generated vertical-loop `srcDoc`, its own SHA-256, and attribution. This configured document is distinct from the raw canonical HTML above.
+- `raglab-document.ts` changes only the two Canvas headline strings, document title, headline ink and background. It draws **RAGLAB AI** and **RETRIEVE. EVALUATE. OPTIMIZE.** inside Canvas. The supporting subtitle is ordinary surrounding interface text.
+- Ring geometry, halftone textures, Didone drawing functions, 15.015-second clock, hover/hold easing and stacking remain the authored implementation. The browser regression reverses the allowed substitutions and verifies byte equality with the retained original; actual `fillText` calls verify the rendered wording.
+- MIT, copyright (c) 2026 Meng To; full retained notice: `docs/licenses/threeui-MIT.txt`.
 
-The recovery machine's previous temporary checkout was removed and the original working directory had cloud-only dependencies/build assets. A downloaded local checkout and runtime were restored; archived workspace databases were left untouched. Do not put the active build/venv in a temporary directory or a cloud-evictable parent dependency tree. RAGLAB_DATA_DIR selects an existing persistent data folder; changing it does not migrate previous data automatically.
+The local frame retains `sandbox="allow-scripts"` and the official frame-leave handshake. It is lazy-loaded and its document/listeners are released when stopped, hidden or offscreen. Reduced motion loads no Canvas. Hover or hold touch input activates the authored orbit; it is not replaced with an approximation or an autoplay loop.
 
-Workspace entry uses a shared near-white mask: 780ms desktop, 380ms mobile, immediate for reduced motion and Skip Intro. Routing occurs only while the mask covers the page; internal dashboard links never invoke it.
+## One continuous website
 
-The official animation rests until hover/touch and eases back down when the pointer leaves; this authored behavior is retained. Browser movement checks use real pointer/touch input and compare actual Canvas frames. It is not forced into a replacement autoplay loop.
+`/` renders the hero followed by exactly one existing `Studio` Overview instance. Natural scrolling reveals an overlapping rounded workspace panel and progressively removes its inset mask. The palette blends near-black plum, eggplant, orchid, warm blush and cream surfaces. The embedded sidebar is sticky on desktop, uses the original mobile drawer, and permits wheel chaining back to the hero.
+
+Enter Workspace and Skip Intro target `#workspace`, focus the real workspace and use native scrolling (immediate for Skip/reduced motion). No wheel or touch interception, pinned scene, duplicate dashboard, replacement API or new animation library is used. Reverse scrolling retains the same Studio instance. `/overview` and existing deep links remain direct; Explore Pipeline opens the existing separate tour.
+
+## API and scope
+
+FastAPI remains on `127.0.0.1:8000`; Next `/api/*` rewrites use API_URL, defaulting to that address. Set API_URL before a production build if changing it. Both services must be running. Health errors and the real workspace Retry connection action remain visible. No backend code, research logic, models, schemas, benchmarks or research documents are changed by this integration.

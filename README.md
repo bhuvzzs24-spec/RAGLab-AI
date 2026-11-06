@@ -192,6 +192,6 @@ Browser tests cover desktop/mobile dataset review validation, all 18 real config
 
 GitHub Actions runs backend tests, the production build and TypeScript on pushes/PRs. Its manual `real_benchmark` option additionally runs real local-model benchmarking and browser smoke tests. The environment example contains placeholders only. Do not commit credentials, runtime databases, private documents, generated vectors/indexes, model weights, virtual environments or build/test caches.
 
-### Cinematic entry
+### Continuous cinematic opening
 
-Open `/` for the official ThreeUI Halftone Loop landing, or bookmark `/overview` to enter the existing workspace directly. Enter Workspace uses a 780ms desktop / 380ms mobile reveal; Skip Intro and reduced motion navigate immediately. The separate Pipeline Tour remains available. [Source integrity, MIT license and integration notes](docs/THREEUI.md).
+At `/`, the licensed Halftone Loop draws RAGLab's own headings, then normal scrolling reveals the real workspace on the same page. Enter Workspace scrolls to `#workspace`; `/overview` remains a direct dashboard entry. The overlapping blush/cream panel expands naturally, preserves one Studio instance and releases the Canvas while offscreen. [Source attribution and customization notes](docs/THREEUI.md).

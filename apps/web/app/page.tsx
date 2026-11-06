@@ -1,2 +1,2 @@
-import Landing from '../components/landing';
-export default function Page(){return <Landing/>}
+import ContinuousOpening from '../components/continuous-opening';
+export default function Page(){return <ContinuousOpening/>}
