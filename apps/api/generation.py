@@ -17,12 +17,21 @@ def configuration():
     return base, model, key, bool(model and (key or not require_key))
 
 
+def valid_base_url(base):
+    try:
+        parsed=urlparse(base)
+        parsed.port  # Invalid ports/IPv6 must not escape into an API 500.
+        return bool(parsed.hostname and parsed.scheme in ('http','https') and not parsed.username and not parsed.password and not parsed.query and not parsed.fragment)
+    except (ValueError,TypeError):return False
+
+
 def public_configuration():
-    base, model, _, configured = configuration()
-    # Never return credential values, URL query parameters, or URL userinfo.
-    parsed = urlparse(base)
-    return {'configured': configured, 'model': model or None,
-            'provider_host': parsed.hostname, 'protocol': 'chat_completions','status':'configured_not_tested' if configured else 'not_configured','generation_tested':False}
+    base,model,_,configured=configuration();valid=valid_base_url(base)
+    try:host=urlparse(base).hostname
+    except ValueError:host=None
+    return {'configured':bool(configured and valid),'model':model or None,'provider_host':host,
+            'protocol':'chat_completions','status':'invalid_configuration' if not valid else ('configured_not_tested' if configured else 'not_configured'),
+            'generation_tested':False}
 
 
 def generate(question, hits, transport=None):
@@ -32,8 +41,7 @@ def generate(question, hits, transport=None):
     if not configured:
         return {'status': 'provider_unconfigured', 'answer': None, 'citations': [],
                 'message': 'Retrieval is complete. Set LLM_MODEL and LLM_API_KEY (or OPENAI_API_KEY) on the server to generate an answer.'}
-    parsed = urlparse(base)
-    if not parsed.hostname or parsed.scheme not in ('http', 'https') or parsed.username or parsed.password or parsed.query or parsed.fragment:
+    if not valid_base_url(base):
         return {'status': 'provider_error', 'answer': None, 'citations': [], 'message': 'LLM_API_BASE must be a plain HTTP(S) API base URL without credentials or query parameters.'}
     # Each supplied passage is bounded, and citations may refer only to this exact context.
     sources = [{'source_id': i+1, 'name': h['source_name'], 'pages': h['page_numbers'],
@@ -108,10 +116,8 @@ def generate(question, hits, transport=None):
 def probe(transport=None):
     """Explicit opt-in provider reachability/model-list probe, not proof of generation."""
     base,model,key,configured=configuration();public=public_configuration()
+    if not valid_base_url(base):return {**public,'status':'invalid_configuration','generation_tested':False,'message':'Use a plain HTTP(S) base URL with a valid host/port, without credentials or query parameters.'}
     if not configured:return {**public,'status':'not_configured','generation_tested':False,'message':'Set server-side LLM_MODEL and LLM_API_KEY. Retrieval remains available.'}
-    parsed=urlparse(base)
-    if parsed.scheme not in ('http','https') or not parsed.hostname or parsed.username or parsed.password or parsed.query or parsed.fragment:
-        return {**public,'status':'invalid_configuration','generation_tested':False,'message':'Use a plain HTTP(S) base URL without credentials or query parameters.'}
     try:
         with httpx.Client(timeout=httpx.Timeout(10,connect=5),transport=transport) as client:
             response=client.get(base+'/models',headers={'Authorization':'Bearer '+key} if key else {})
@@ -124,5 +130,5 @@ def probe(transport=None):
         status=exc.response.status_code
         return {**public,'status':'provider_error','generation_tested':False,'http_status':status,
                 'message':{401:'Credentials rejected.',403:'Access denied.',429:'Provider rate limit or quota exceeded.'}.get(status,'Provider health request failed.')}
-    except (httpx.RequestError,ValueError,TypeError,AttributeError):
+    except (httpx.RequestError,httpx.InvalidURL,ValueError,TypeError,AttributeError):
         return {**public,'status':'provider_unreachable','generation_tested':False,'message':'Provider probe failed. Check network, API base URL and JSON protocol.'}

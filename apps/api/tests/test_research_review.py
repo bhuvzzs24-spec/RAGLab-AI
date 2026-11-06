@@ -69,6 +69,10 @@ def test_provider_probe_redacts_bodies_and_never_claims_generation(monkeypatch):
     assert probe(httpx.MockTransport(lambda _:httpx.Response(404)))['status']=='probe_unsupported'
     monkeypatch.setenv('LLM_API_BASE','https://user:password@example.test/v1')
     assert probe(transport)['status']=='invalid_configuration'
+    for base in ['https://example.test:bad/v1','https://[invalid','ftp://example.test/v1']:
+        monkeypatch.setenv('LLM_API_BASE',base)
+        assert probe(transport)['status']=='invalid_configuration'
+        assert generate('fixture question',[{'source_name':'fixture','page_numbers':[1],'text':'Fixture passage.'}],transport)['status']=='provider_error'
 
 
 def test_bounded_429_retry_and_no_automatic_timeout_retry(monkeypatch):
