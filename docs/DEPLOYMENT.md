@@ -57,3 +57,13 @@ python scripts/audit_staged.py
 ```
 
 Real smoke scripts use disposable source databases, genuine pinned models and FAISS. Browser tests own production Next.js and API servers; stop existing processes on 3000/8000 first and never point browser test storage at private research data. CI offers manual `real_benchmark=true` to run both real-model smokes and desktop/mobile browser flows.
+
+## Upgrade and troubleshooting (research/editorial edition)
+
+Stop the single API process and back up the complete runtime directory before upgrading. Additive review tables are created at startup; historical snapshots and generated indexes remain intact. Existing approvals have no invented historical events. Use the original pinned model cache and a stable absolute RAGLAB_DATA_DIR outside cloud-only placeholder storage.
+
+If ports 3000/8000 are occupied, identify the owner before stopping anything; the E2E suite deliberately refuses to reuse an unknown server. It owns isolated test servers and must never use private runtime data. After a production rebuild, start Next.js again. Next.js API_URL rewrites are compiled at build time.
+
+A 429 upload means two PDF parsers are active; retry after completion. A PDF resource-limit error means split/simplify the file. A 429 benchmark means three active jobs already exist, including resumed work. Cancel/finish one; completed results remain available. Review 409 responses mean reload the latest dataset/answer-review revision before resubmitting. A model-list probe does not prove generation access; inspect actual grounded answers separately.
+
+Browser verification includes locked `@axe-core/playwright` checks, keyboard focus, reduced motion, mobile bounds, the native-scroll tour, explicit review events and actual model retrieval. Automated checks are not a certification of complete WCAG conformance or a penetration test. The native-code PDF worker limits resources but is not a general security sandbox.

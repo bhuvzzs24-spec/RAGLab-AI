@@ -42,3 +42,11 @@ with tempfile.TemporaryDirectory(prefix='raglab-adaptive-real-') as directory:
         args.output.with_suffix('.csv').write_text(c.get('/benchmarks/runs/'+validation['id']+'/export?format=csv').text)
         args.pdf.parent.mkdir(parents=True,exist_ok=True);pdf=c.get('/benchmarks/runs/'+test['id']+'/export?format=pdf');assert pdf.status_code==200;args.pdf.write_bytes(pdf.content)
         print(f'REAL_ADAPTIVE_PASS: search {id}; 18 validation configs / 144 measurements; 1 frozen test config / 8 measurements; repeat validation 144; no human-reviewed or live-LLM claims.',flush=True)
+    # The first API lifespan has stopped. Verify persisted state in a NEW Python process.
+    import subprocess
+    child=subprocess.run([sys.executable,str(Path(__file__).with_name('restart_probe.py')),'--search-id',id],
+                         env={**os.environ,'RAGLAB_DATA_DIR':directory},capture_output=True,text=True,timeout=180)
+    assert child.returncode==0,child.stdout[-1500:]+child.stderr[-1500:]
+    line=next(line for line in child.stdout.splitlines() if line.startswith('RESTART_PROBE_PASS '))
+    evidence=json.loads(args.output.read_text());evidence['verification']['restart']=json.loads(line.split(' ',1)[1]);args.output.write_text(json.dumps(evidence,indent=2)+'\n')
+    print(line,flush=True)

@@ -5,9 +5,9 @@ export type VectorIndex={id:string;model_id:string;model_revision:string;dimensi
 export type Hit={id:string;ordinal:number;document_id:string;source_name:string;chunk_index:number;part:number;start:number;end:number;tokens:number;model_tokens:number;page_numbers:number[];text:string;score:number;source_id:number;source_url:string};
 export type RetrievalResult={id:string;retrieval_id:string;index_id:string;model_id:string;model_revision:string;query:string;hits:Hit[];latency_ms:number;timings:{query_embedding_ms:number;search_and_load_ms:number};expected_hit:boolean|null;index_reused:boolean};
 export type Citation={source_id:number;quote:string;chunk_id:string;document_id:string;page_numbers:number[];start:number;end:number};
-export type Generation={status:string;answer:string|null;citations:Citation[];message?:string;model?:string;latency_ms?:number;grounding_note?:string};
+export type Generation={id?:string;claims?:{text:string}[];status:string;answer:string|null;citations:Citation[];message?:string;model?:string;latency_ms?:number;grounding_note?:string};
 export type Provider={configured:boolean;model:string|null;provider_host:string|null;protocol:string};
-export type Point={x:number;y:number;ordinal:number;document_id:string;source_name:string;tokens:number;page_numbers:number[]};
+export type Point={stable_id?:string;start?:number;end?:number;x:number;y:number;ordinal:number;document_id:string;source_name:string;tokens:number;page_numbers:number[]};
 export type Projection={method:string;sampled:number;total:number;explained_variance:number[];points:Point[]};
 export async function request<T>(path:string, init?:RequestInit):Promise<T>{
  const response=await fetch('/api'+path,init);

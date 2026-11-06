@@ -411,8 +411,10 @@ class Engine:
         sample=vectors[selected].astype('float64')
         centered=sample-sample.mean(axis=0)
         if len(sample)>1 and np.linalg.norm(centered)>1e-12:
-            u,s,_=np.linalg.svd(centered,full_matrices=False)
+            u,s,vt=np.linalg.svd(centered,full_matrices=False)
             coordinates=u[:,:2]*s[:2]
+            for axis in range(coordinates.shape[1]):
+                if vt[axis,np.argmax(np.abs(vt[axis]))]<0:coordinates[:,axis]*=-1
             if coordinates.shape[1]<2: coordinates=np.pad(coordinates,((0,0),(0,1)))
             explained=(s[:2]**2/(s**2).sum()).tolist()
         else:
@@ -420,5 +422,6 @@ class Engine:
         chunks=self.chunks(id)
         return {'method':'PCA','sampled':len(sample),'total':len(vectors),'explained_variance':explained,
                 'points':[{'x':float(xy[0]),'y':float(xy[1]),'ordinal':int(i),'document_id':chunks[i]['document_id'],
+                           'stable_id':digest((chunks[i]['document_id']+':'+str(chunks[i]['start'])+':'+str(chunks[i]['end'])+':'+chunks[i]['text']).encode()),'start':chunks[i]['start'],'end':chunks[i]['end'],
                            'source_name':chunks[i]['source_name'],'tokens':chunks[i]['model_tokens'],
                            'page_numbers':chunks[i]['page_numbers']} for xy,i in zip(coordinates,selected)]}

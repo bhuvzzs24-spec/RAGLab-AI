@@ -11,7 +11,7 @@ from reportlab.graphics.shapes import Drawing,Rect,String,Line,Circle
 from evaluation import METHODOLOGY
 from adaptive import uncertainty
 
-CYAN=colors.HexColor('#0896aa');CORAL=colors.HexColor('#f16b52');INK=colors.HexColor('#203143')
+CYAN=colors.HexColor('#400849');CORAL=colors.HexColor('#FF5A0A');INK=colors.HexColor('#241426')
 
 def benchmark_pdf(run,measurements):
     stream=io.BytesIO();styles=getSampleStyleSheet()
@@ -44,7 +44,7 @@ def benchmark_pdf(run,measurements):
         rows.append([tp(label),*[tp(fmt(m.get(k))) for k in ['precision_at_k','recall_at_k','mrr']],
             tp(fmt(m.get('latency_mean_ms'),2)),tp('Reused' if c['indexing_time_ms'] is None and c['index_cache_reused'] else fmt(c['indexing_time_ms'],1)),tp(m.get('unique_answerable_questions','-'))])
     table=Table(rows,colWidths=[157,40,40,40,61,64,29],repeatRows=1,hAlign='LEFT')
-    table.setStyle(TableStyle([('BACKGROUND',(0,0),(-1,0),colors.HexColor('#e2f5f7')),('VALIGN',(0,0),(-1,-1),'TOP'),('BOTTOMPADDING',(0,0),(-1,-1),3),('TOPPADDING',(0,0),(-1,-1),3),('LINEBELOW',(0,0),(-1,0),1,CYAN),('ROWBACKGROUNDS',(0,1),(-1,-1),[colors.white,colors.HexColor('#f5f8fb')])]))
+    table.setStyle(TableStyle([('BACKGROUND',(0,0),(-1,0),colors.HexColor('#F5E7F2')),('VALIGN',(0,0),(-1,-1),'TOP'),('BOTTOMPADDING',(0,0),(-1,-1),3),('TOPPADDING',(0,0),(-1,-1),3),('LINEBELOW',(0,0),(-1,0),1,CYAN),('ROWBACKGROUNDS',(0,1),(-1,-1),[colors.white,colors.HexColor('#F7F3F8')])]))
     story += [table,p('*N is unique answerable questions; repeated queries are not independent samples. Missing metrics remain unevaluated. Reused index build time is not measured anew.'),PageBreak(),p('Actual metric charts','Heading2')]
     if complete:
         drawing=Drawing(490,max(90,24*len(complete)+40));h=drawing.height
@@ -75,6 +75,13 @@ def benchmark_pdf(run,measurements):
     story.append(p('Do not tune configurations on held-out test results. Repeated adaptive searches on the same test partition weaken its independence. Split guards detect exact duplicates, explicit groups and overlapping evidence, not all semantic paraphrases. Review related questions manually. All latency measurements reflect this host and cache state.'))
     for c in configs:
         if c.get('error'):story.append(p(f"Failure {c['id']}: {c['error']}"))
+    human=run.get('human_answer_evaluation')
+    if human:
+        story.append(PageBreak())
+        story.append(p('Optional human answer evaluation','Heading2'))
+        story.append(p(f"Reviewed answers: {human['reviewed_answers']}/{human['stored_answers']}. Human correctness: {fmt(human['correctness'])} (N={human['correctness_n']}); human groundedness: {fmt(human['groundedness'])} (N={human['groundedness_n']}). As of {human['as_of']}."))
+        story.append(p(human['limitation']))
+        for label,text in human['rubric'].items():story.append(p(label+': '+text))
     story.append(p('Model versions and runtime','Heading2'))
     for model,spec in settings.get('model_registry',{}).items():
         story.append(p(f"{model}: {spec['repository']}\nPinned revision {spec['revision']} | {spec['dimensions']} dimensions | normalized vectors\nQuery prefix: {spec.get('query_prefix') or '(none)'}"))

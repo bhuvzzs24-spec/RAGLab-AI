@@ -67,3 +67,7 @@ Weights are disclosed heuristics, not learned universal utility. Indexing times 
 ## Phase 4 adaptive evaluation
 
 See [PHASE4.md](PHASE4.md) for split isolation, held-out reservation, normalized objective weights, Pareto dominance, question-cluster bootstrap construction and repeatability limitations. The original Phase 3 descriptive leaderboard formula remains compatible. Adaptive search chooses from validation only and runs one frozen configuration on reserved test; test results cannot enter the adaptive analysis endpoint.
+
+## Attributed review and post-run judgments
+
+See RESEARCH_UPGRADE.md for review decisions, backend approval invalidation, frozen audit provenance and explicit human answer rubrics. Imported flags do not constitute a new review. Automated semantic groundedness stays unevaluated; optional post-run human claim judgments have separate denominators, unique-question counts and timestamps. Review history is append-only at the application API level, not cryptographically tamper-proof or authenticated. Descriptive comparisons after review do not establish statistical superiority or restore an already exposed test set's independence.

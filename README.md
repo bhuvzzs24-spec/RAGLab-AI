@@ -1,5 +1,11 @@
 # RAGLab AI - Adaptive RAG Benchmarking & Optimization
 
+**Research/editorial edition (2026-11-06):** explicit evidence decisions with append-only history, backend approval invalidation, honest provider probes, optional attributed human answer evaluation, bounded PDF ingestion, paired run comparisons, and a redesigned orchid/eggplant/orange studio. The optional cinematic intro and native-scroll Pipeline Tour use conceptual motion or actual stored data with clear labels. All previous phases and Git history remain.
+
+- [Research upgrade: workflow, security bounds and honest limitations](docs/RESEARCH_UPGRADE.md)
+- [Current verification results](docs/RESEARCH_VERIFICATION.md)
+
+
 **Phase 4 extends the existing Phases 1-3.** Validation-only automatic search, configurable accuracy/latency objectives, Pareto analysis, frozen one-config held-out evaluation, split-aware evidence review, uncertainty/repeatability reporting and actual PDF/CSV/JSON reports are implemented. All supplied sample labels remain unreviewed; missing LLM credentials produce honest retrieval-only behavior.
 
 - [Phase 4 workflow and API](docs/PHASE4.md)

@@ -1,5 +1,6 @@
 """Editable source-grounded datasets. Human-review flags are explicit attestations."""
 import csv
+from ingestion import csv_safe
 import hashlib
 import io
 import json
@@ -30,6 +31,7 @@ class QuestionInput(BaseModel):
     reference_answers:list[str]=Field(default_factory=list,max_length=10)
     answerability:Literal['answerable','unanswerable','unknown']='answerable'
     relevant_spans:list[EvidenceInput]=Field(default_factory=list,max_length=30)
+    review_status:Literal['unreviewed','reviewed','rejected']|None=None
     human_reviewed:bool=False
     reviewer:str=Field('',max_length=100)
     review_notes:str=Field('',max_length=2000)
@@ -44,6 +46,7 @@ class DatasetInput(BaseModel):
     questions:list[QuestionInput]=Field(default_factory=list,max_length=500)
     expected_revision:int|None=None
     sample:bool=False
+    editor:str=Field('',max_length=100)
 
 class DatasetStore:
     def __init__(self,connect):
@@ -52,6 +55,26 @@ class DatasetStore:
             db.execute('''CREATE TABLE IF NOT EXISTS benchmark_datasets(id TEXT PRIMARY KEY,name TEXT,description TEXT,
                 revision INTEGER,document_ids TEXT,questions TEXT,sample INTEGER DEFAULT 0,
                 created TEXT DEFAULT CURRENT_TIMESTAMP,updated TEXT DEFAULT CURRENT_TIMESTAMP)''')
+
+            db.execute('''CREATE TABLE IF NOT EXISTS dataset_review_history(
+                id TEXT PRIMARY KEY,dataset_id TEXT REFERENCES benchmark_datasets(id),question_id TEXT,
+                revision INTEGER,action TEXT,actor TEXT,notes TEXT,before_json TEXT,after_json TEXT,
+                created TEXT DEFAULT CURRENT_TIMESTAMP)''')
+
+    def history(self,id):
+        self.get(id)
+        with self.connect() as db:rows=db.execute('SELECT * FROM dataset_review_history WHERE dataset_id=? ORDER BY rowid DESC',(id,)).fetchall()
+        return [{**dict(r),'before_json':json.loads(r['before_json']) if r['before_json'] else None,'after_json':json.loads(r['after_json']) if r['after_json'] else None} for r in rows]
+
+    def review(self,id,question_id,data):
+        current=self.get(id)
+        if data.expected_revision!=current['revision']:raise HTTPException(409,'Dataset revision changed. Reload before reviewing.')
+        question=next((q for q in current['questions'] if q['id']==question_id),None)
+        if not question:raise HTTPException(404,'Question not found.')
+        if not data.reviewer.strip():raise HTTPException(422,'A reviewer name is required for an explicit decision.')
+        question.update(review_status={'approve':'reviewed','reject':'rejected','reopen':'unreviewed'}[data.action],
+            human_reviewed=data.action=='approve',reviewer=data.reviewer.strip(),review_notes=data.notes)
+        return self.save(DatasetInput(**{**current,'editor':data.reviewer,'expected_revision':data.expected_revision}),id,decision=(question_id,data.action))
 
     def resolve_document(self,key):
         with self.connect() as db:
@@ -72,6 +95,8 @@ class DatasetStore:
             if q.id in ids:raise HTTPException(422,'Question IDs must be unique.')
             ids.add(q.id)
             if q.human_reviewed and not q.reviewer.strip():raise HTTPException(422,'Record a reviewer name before marking a question and its evidence as human reviewed.')
+            if q.review_status=='rejected' and q.human_reviewed:raise HTTPException(422,'Rejected questions cannot be human reviewed. Reopen and approve explicitly.')
+            if q.review_status=='rejected' and not q.reviewer.strip():raise HTTPException(422,'Rejected questions require reviewer attribution.')
             spans=[];span_ids=set()
             for e in q.relevant_spans:
                 d=self.resolve_document(e.document_id or e.document_name)
@@ -94,29 +119,53 @@ class DatasetStore:
             references=list(dict.fromkeys([s.strip() for s in [q.reference_answer,*q.reference_answers] if s.strip()]))
             if q.human_reviewed and q.answerability=='answerable' and (not spans or not references):raise HTTPException(422,'A reviewed answerable question needs a reference answer and at least one validated evidence span.')
             questions.append({**q.model_dump(exclude={'relevant_spans','reference_answers'}),'question':q.question.strip(),
-                              'reference_answers':references,'relevant_spans':spans})
+                              'reference_answers':references,'relevant_spans':spans,'review_status':'rejected' if q.review_status=='rejected' else ('reviewed' if q.human_reviewed else 'unreviewed')})
         if not documents:raise HTTPException(422,'Select at least one document for the dataset collection.')
         return sorted(documents),questions
 
-    def save(self,data,id=None):
+    def save(self,data,id=None,*,decision=None):
         document_ids,questions=self.validate(data)
         id=id or str(uuid4())
         with self.connect() as db:
             db.execute('BEGIN IMMEDIATE')
-            current=db.execute('SELECT revision FROM benchmark_datasets WHERE id=?',(id,)).fetchone()
+            current=db.execute('SELECT revision,questions FROM benchmark_datasets WHERE id=?',(id,)).fetchone()
             if data.expected_revision is not None and (not current or current['revision']!=data.expected_revision):raise HTTPException(409,'This dataset was updated elsewhere. Reload before saving.')
+            previous={q['id']:q for q in json.loads(current['questions'])} if current else {}
+            # Approval belongs to exact question/reference/evidence content. Edits require a new decision.
+            content_keys=['question','reference_answer','reference_answers','answerability','relevant_spans']
+            for q in questions:
+                old=previous.get(q['id'])
+                if old and (any(old.get(k)!=q.get(k) for k in content_keys) or (old.get('reviewer','')!=q.get('reviewer','') and (not decision or decision[0]!=q['id']))):
+                    q.update(human_reviewed=False,review_status='unreviewed')
+            revision=current['revision']+1 if current else 1
             if current:
                 db.execute('UPDATE benchmark_datasets SET name=?,description=?,revision=revision+1,document_ids=?,questions=?,sample=?,updated=CURRENT_TIMESTAMP WHERE id=?',
                            (data.name.strip(),data.description,json.dumps(document_ids),json.dumps(questions),int(data.sample),id))
             else:
                 db.execute('INSERT INTO benchmark_datasets(id,name,description,revision,document_ids,questions,sample) VALUES(?,?,?,1,?,?,?)',
                            (id,data.name.strip(),data.description,json.dumps(document_ids),json.dumps(questions),int(data.sample)))
+            after={q['id']:q for q in questions}
+            for qid in sorted(previous.keys()|after.keys()):
+                old,new=previous.get(qid),after.get(qid)
+                if old==new and (not decision or decision[0]!=qid):continue
+                action='created' if old is None else ('removed' if new is None else 'edited')
+                if old and new:
+                    old_status=old.get('review_status') or ('reviewed' if old.get('human_reviewed') else 'unreviewed')
+                    if old_status!=new['review_status']:action={'reviewed':'approved','rejected':'rejected','unreviewed':'reopened'}[new['review_status']]
+                    if any(old.get(k)!=new.get(k) for k in content_keys):action='edited_approval_revoked' if old.get('human_reviewed') else 'edited'
+                if decision and decision[0]==qid:action={'approve':'approved','reject':'rejected','reopen':'reopened'}[decision[1]]
+                actor=data.editor.strip() or ((new or old).get('reviewer','').strip() if action in ('approved','rejected','reopened') else None) or None
+                db.execute('INSERT INTO dataset_review_history(id,dataset_id,question_id,revision,action,actor,notes,before_json,after_json) VALUES(?,?,?,?,?,?,?,?,?)',
+                    (str(uuid4()),id,qid,revision,action,actor,(new or old).get('review_notes',''),json.dumps(old) if old else None,json.dumps(new) if new else None))
         return self.get(id)
 
     def get(self,id):
         with self.connect() as db:r=db.execute('SELECT * FROM benchmark_datasets WHERE id=?',(id,)).fetchone()
         if not r:raise HTTPException(404,'Dataset not found.')
         data=dict(r);data['document_ids']=json.loads(data['document_ids']);data['questions']=json.loads(data['questions']);data['sample']=bool(data['sample'])
+
+        for q in data['questions']:q.setdefault('review_status','reviewed' if q.get('human_reviewed') else 'unreviewed')
+        data['rejected_count']=sum(q['review_status']=='rejected' for q in data['questions'])
         data['question_count']=len(data['questions']);data['reviewed_count']=sum(q['human_reviewed'] for q in data['questions'])
         return data
 
@@ -127,7 +176,7 @@ class DatasetStore:
     def snapshot(self,id,include_unreviewed=False,split='all'):
         if split not in ('all','train','validation','test'):raise HTTPException(422,'Invalid evaluation split.')
         data=self.get(id)
-        questions=[q for q in data['questions'] if q['answerability']!='unknown' and (q['human_reviewed'] or include_unreviewed) and (split=='all' or q.get('split','unassigned')==split)]
+        questions=[q for q in data['questions'] if q['answerability']!='unknown' and q.get('review_status')!='rejected' and (q['human_reviewed'] or include_unreviewed) and (split=='all' or q.get('split','unassigned')==split)]
         if not questions or not any(q['answerability']=='answerable' for q in questions):raise HTTPException(422,'Review at least one answerable question with reference/evidence, or explicitly include provisional annotations.')
         for q in questions:
             if q['answerability']=='answerable' and (not q['relevant_spans'] or not q['reference_answers']):raise HTTPException(422,'Every included answerable question needs reference answers and relevant source spans.')
@@ -140,6 +189,7 @@ class DatasetStore:
                 if hashes.get(e['document_id'])!=e['source_sha256']:raise HTTPException(409,'Evidence source changed. Review the dataset before benchmarking.')
         snapshot={'dataset_id':data['id'],'name':data['name'],'revision':data['revision'],'sample':data['sample'],
                   'document_ids':data['document_ids'],'sources':sources,'questions':questions,
+                  'review_history_ids':[event['id'] for event in self.history(data['id']) if event['revision']<=data['revision']],
                   'split':split,'include_unreviewed':include_unreviewed,'provisional':any(not q['human_reviewed'] for q in questions),
                   'reviewed_questions':sum(q['human_reviewed'] for q in questions),'excluded_questions':len(data['questions'])-len(questions)}
         snapshot['fingerprint']=sha(json.dumps(snapshot,sort_keys=True))
@@ -164,11 +214,11 @@ class DatasetStore:
                         grouped[id]={'id':id,'question':row['question'],'reference_answer':row.get('reference_answer',''),
                             'reference_answers':json.loads(row.get('reference_answers') or '[]'),'answerability':row.get('answerability') or 'answerable',
                             'human_reviewed':reviewed in ('true','1'),'reviewer':row.get('reviewer',''),'review_notes':row.get('review_notes',''),
-                            'split':row.get('split') or 'unassigned','group_id':row.get('group_id') or '',
+                            'review_status':row.get('review_status') or 'unreviewed','split':row.get('split') or 'unassigned','group_id':row.get('group_id') or '',
                             'annotation_origin':'import','relevant_spans':[]}
                     else:
                         expected=grouped[id]
-                        check={'split':row.get('split') or 'unassigned','group_id':row.get('group_id') or '', 'question':row['question'],'reference_answer':row.get('reference_answer',''),
+                        check={'review_status':row.get('review_status') or 'unreviewed','split':row.get('split') or 'unassigned','group_id':row.get('group_id') or '', 'question':row['question'],'reference_answer':row.get('reference_answer',''),
                                'reference_answers':json.loads(row.get('reference_answers') or '[]'),
                                'answerability':row.get('answerability') or 'answerable',
                                'reviewer':row.get('reviewer',''),'review_notes':row.get('review_notes','')}
@@ -183,6 +233,9 @@ class DatasetStore:
             else:raise HTTPException(415,'Import a UTF-8 CSV or JSON dataset.')
             parsed['name']=name or parsed.get('name') or Path(filename).stem
             if collection:parsed['document_ids']=collection
+            # Imported attestation flags are not a review performed in this application.
+            for question in parsed.get('questions',[]):
+                question.update(human_reviewed=False,review_status='unreviewed',reviewer='',annotation_origin='import')
             return self.save(DatasetInput(**parsed))
         except HTTPException:raise
         except Exception as exc:raise HTTPException(422,'Dataset import failed: '+str(exc)[:300])
@@ -202,13 +255,15 @@ class DatasetStore:
 
     def export(self,id,format):
         data=self.get(id)
-        if format=='json':return Response(json.dumps(data,indent=2),media_type='application/json',headers={'Content-Disposition':'attachment; filename="raglab-dataset.json"'})
+        if format=='json':return Response(json.dumps({**data,'review_history':self.history(id)},indent=2),media_type='application/json',headers={'Content-Disposition':'attachment; filename="raglab-dataset.json"'})
         if format!='csv':raise HTTPException(422,'Choose csv or json.')
-        out=io.StringIO();fields=['question_id','question','reference_answer','reference_answers','split','group_id','answerability','human_reviewed','reviewer','review_notes','document_id','document_name','start','end','quote','source_sha256']
-        writer=csv.DictWriter(out,fieldnames=fields);writer.writeheader()
+        out=io.StringIO();fields=['question_id','question','reference_answer','reference_answers','split','group_id','answerability','human_reviewed','review_status','reviewer','review_notes','document_id','document_name','start','end','quote','source_sha256']
+        writer=csv.DictWriter(out,fieldnames=fields,lineterminator='\n');writer.writeheader()
+        write_row=writer.writerow
+        writer.writerow=lambda row:write_row({k:csv_safe(v) for k,v in row.items()})
         for q in data['questions']:
             for span in q['relevant_spans'] or [{}]:
-                writer.writerow({'question_id':q['id'],**{k:q.get(k,'') for k in ['question','reference_answer','split','group_id','answerability','reviewer','review_notes']},
+                writer.writerow({'question_id':q['id'],**{k:q.get(k,'') for k in ['question','reference_answer','split','group_id','answerability','review_status','reviewer','review_notes']},
                     'reference_answers':json.dumps(q['reference_answers']),'human_reviewed':str(q['human_reviewed']).lower(),
                     **{k:span.get(k,'') for k in ['document_id','document_name','start','end','quote','source_sha256']}})
         return Response(out.getvalue(),media_type='text/csv',headers={'Content-Disposition':'attachment; filename="raglab-dataset.csv"'})
@@ -237,6 +292,10 @@ def router(store):
     @routes.put('/{id}')
     def update_dataset(id:str,data:DatasetInput):
         store.get(id);return store.save(data,id)
+    @routes.get('/{id}/history')
+    def history(id:str):return store.history(id)
+    @routes.post('/{id}/questions/{question_id}/review')
+    def review(id:str,question_id:str,data:ReviewInput):return store.review(id,question_id,data)
     @routes.post('/{id}/split')
     def split_dataset(id:str,data:SplitInput):
         return assign_splits(store,id,data)
@@ -291,3 +350,10 @@ def assign_splits(store,id,data):
         for q in group:q['split']=split
     validate_split_isolation(current['questions'])
     return store.save(DatasetInput(**{**current,'expected_revision':data.expected_revision}),id)
+
+
+class ReviewInput(BaseModel):
+    expected_revision:int
+    action:Literal['approve','reject','reopen']
+    reviewer:str=Field(min_length=1,max_length=100)
+    notes:str=Field('',max_length=2000)

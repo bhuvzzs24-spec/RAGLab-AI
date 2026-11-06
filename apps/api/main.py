@@ -2,6 +2,11 @@ import json
 import os
 import sqlite3
 import time
+import asyncio
+import threading
+from boundaries import RequestBoundary,allowed_origins
+PDF_SLOTS=threading.BoundedSemaphore(2)
+from ingestion import safe_name,extract_pages
 os.environ.setdefault('OMP_NUM_THREADS', '1')
 os.environ.setdefault('TOKENIZERS_PARALLELISM', 'false')
 from pathlib import Path
@@ -12,7 +17,7 @@ from fastapi import FastAPI, UploadFile, HTTPException
 from contextlib import asynccontextmanager
 from pipeline import Engine, Build, Retrieval, Answer
 import embeddings
-from generation import public_configuration
+from generation import public_configuration,probe
 from datasets import DatasetStore, router as dataset_router
 from benchmarks import BenchmarkService, router as benchmark_router
 from fastapi.middleware.cors import CORSMiddleware
@@ -42,6 +47,9 @@ dataset_store = DatasetStore(connect)
 benchmark_service = BenchmarkService(connect, engine, dataset_store)
 from adaptive import AdaptiveService, router as adaptive_router
 adaptive_service = AdaptiveService(connect, benchmark_service, dataset_store)
+from answer_reviews import AnswerReviewStore,router as answer_review_router
+answer_review_store=AnswerReviewStore(connect)
+benchmark_service.answer_reviews=answer_review_store
 
 @asynccontextmanager
 async def lifespan(app):
@@ -54,7 +62,10 @@ app = FastAPI(title='RAGLab API', lifespan=lifespan)
 app.include_router(dataset_router(dataset_store))
 app.include_router(benchmark_router(benchmark_service))
 app.include_router(adaptive_router(adaptive_service))
-app.add_middleware(CORSMiddleware, allow_origins=os.getenv('CORS_ORIGINS','http://localhost:3000').split(','), allow_methods=['*'], allow_headers=['*'])
+app.include_router(answer_review_router(answer_review_store,benchmark_service))
+ORIGINS=allowed_origins(os.getenv('CORS_ORIGINS','http://localhost:3000,http://127.0.0.1:3000'))
+app.add_middleware(CORSMiddleware,allow_origins=ORIGINS,allow_methods=['GET','POST','PUT','DELETE','OPTIONS'],allow_headers=['Content-Type'])
+app.add_middleware(RequestBoundary,origins=ORIGINS)
 
 def encode(texts):
     try:
@@ -86,7 +97,8 @@ def get_document(id: str):
 
 @app.post('/documents',status_code=201)
 async def upload(file: UploadFile):
-    name = Path((file.filename or '').replace('\\','/')).name
+    try:name=safe_name(file.filename)
+    except ValueError as exc:raise HTTPException(422,str(exc))
     ext = Path(name).suffix.lower()
     if ext not in {'.pdf','.txt','.md'}:
         raise HTTPException(415,'Choose a PDF, UTF-8 TXT, or Markdown file.')
@@ -94,26 +106,12 @@ async def upload(file: UploadFile):
     if len(raw)>10*1024*1024:
         raise HTTPException(413,'File exceeds the 10 MB limit.')
     try:
-        if ext == '.pdf':
-            if not raw.startswith(b'%PDF-'):
-                raise ValueError('PDF signature is missing')
-            with fitz.open(stream=raw,filetype='pdf') as pdf:
-                if pdf.needs_pass:
-                    raise ValueError('Unlock the encrypted PDF before uploading')
-                if len(pdf)>500:
-                    raise ValueError('PDF exceeds the 500-page limit')
-                pages = []
-                extracted = 0
-                for page in pdf:
-                    value = page.get_text()
-                    extracted += len(value)
-                    if extracted > 2_000_000:
-                        raise ValueError('Extracted text exceeds 2 million characters')
-                    pages.append(value)
-        else:
-            pages = [raw.decode('utf-8-sig')]
-            if '\x00' in pages[0]:
-                raise ValueError('Binary content is not supported')
+        if ext=='.pdf':
+            if not PDF_SLOTS.acquire(blocking=False):raise HTTPException(429,'Two PDF extractions are active. Retry after one finishes.',headers={'Retry-After':'5'})
+            try:pages=await asyncio.to_thread(extract_pages,raw,ext)
+            finally:PDF_SLOTS.release()
+        else:pages=await asyncio.to_thread(extract_pages,raw,ext)
+    except HTTPException:raise
     except Exception as e:
         raise HTTPException(422,'Could not extract text: '+str(e)[:180])
     text = '\n\n'.join(pages)
@@ -207,6 +205,21 @@ def models():
 def provider():
     return public_configuration()
 
+@app.post('/provider/check')
+def provider_check():return probe()
+
+@app.get('/storage')
+def storage():
+    indexes=engine.list()
+    with connect() as db:
+        integrity=db.execute('PRAGMA quick_check').fetchone()[0]
+        counts={name:db.execute('SELECT count(*) FROM '+name).fetchone()[0] for name in ['documents','benchmark_runs','retrievals','answers']}
+    return {'counts':counts,'database_bytes':DB.stat().st_size,'sqlite_integrity':integrity,'indexes':len(indexes),'ready_indexes':sum(i['status']=='ready' for i in indexes),'active_indexes':sum(i['status'] in ('queued','running') for i in indexes),'artifact_bytes':sum(i['stats'].get('disk_bytes',0) for i in indexes),'scope':'Local single-process storage. Back up while stopped; never publish private exports.'}
+
+@app.post('/storage/check-indexes')
+def check_indexes():
+    rows=engine.list();return {'checked':sum(i['status']=='ready' for i in rows),'invalid_ids':[i['id'] for i in rows if i['status']=='ready' and not engine.artifacts_valid(i)]}
+
 @app.get('/indexes')
 def indexes():
     return engine.list()
@@ -258,6 +271,7 @@ def settings():
 class Settings(BaseModel):
     project_name: str = Field(min_length=1,max_length=100)
     dark_mode: bool = False
+    motion: str = Field('system',pattern='^(system|reduced)$')
 
 @app.put('/settings')
 def save_settings(s: Settings):
@@ -277,3 +291,19 @@ def pipeline_report():
             'answers':[json.loads(r[0]) for r in answer_rows],
             'totals':{'retrievals':retrieval_count,'answers':answer_count},'history_limit':500,
             'provider':public_configuration()}
+
+
+@app.get('/dashboard')
+def dashboard():
+    with connect() as db:
+        counts={table:db.execute('SELECT count(*) FROM '+table).fetchone()[0] for table in ['documents','experiments','vector_indexes','benchmark_runs','retrievals']}
+        ids=[r[0] for r in db.execute('SELECT id FROM benchmark_runs ORDER BY rowid DESC LIMIT 5')]
+    runs=[];recommendation=None
+    for id in ids:
+        run=benchmark_service.get(id)
+        runs.append({k:run[k] for k in ['id','name','status','created','completed_configs','total_configs','completed_measurements','total_measurements'] }|{'provisional':run['snapshot']['provisional'],'dataset_name':run['snapshot']['name']})
+        if recommendation is None and run['status']=='completed' and run['snapshot'].get('split')!='test':
+            ranked=benchmark_service.leaderboard(id)['ranked']
+            if ranked:recommendation={'run_id':id,'config':ranked[0]['config'],'score':ranked[0]['optimizer']['score'],'explanation':ranked[0]['optimizer']['explanation'],'sample_size':ranked[0]['optimizer']['sample_size'],'provisional':run['snapshot']['provisional']}
+    datasets=dataset_store.list()
+    return {'counts':counts,'recent_runs':runs,'recommendation':recommendation,'reviewed_questions':sum(d['reviewed_count'] for d in datasets),'total_questions':sum(d['question_count'] for d in datasets),'provider':public_configuration()}

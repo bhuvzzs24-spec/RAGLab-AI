@@ -1,5 +1,6 @@
 """Versioned, source-span retrieval judgments and transparent aggregation."""
 import re
+import json
 import string
 import numpy as np
 
@@ -13,7 +14,7 @@ METHODOLOGY = {
     'scope': 'Only answerable questions with validated source evidence enter P/R/MRR. Unanswerable questions have undefined retrieval P/R/MRR and a separately reported retrieval abstention rate.',
     'duplicates': 'Repeated identical document/start/end hits do not count twice; original ranks are retained. Different overlapping passages can both be relevant, but cannot inflate evidence recall.',
     'answer_correctness': 'Optional normalized exact match against reference answers, only for successfully generated, answerable outputs. Not a semantic correctness judge.',
-    'groundedness': 'Not evaluated: no validated semantic or human claim evaluator is configured. Citation quote validation is provenance, not semantic groundedness.',
+    'groundedness': 'Automated semantic groundedness is not evaluated. Explicit attributed human claim reviews are exported separately with their rubric, sample sizes and as-of time. Quote validation alone proves provenance, not semantic support.',
     'latency': 'Actual query embedding + index validation/load/search time after one excluded warm-up per configuration. Query repetitions are not independent questions.',
 }
 
@@ -103,5 +104,5 @@ def optimize(configs,objective='balanced'):
         result.append({**c,'optimizer':{'score':score,'retrieval_accuracy_score':quality,'speed_score':speed,
                        'sample_size':m['unique_answerable_questions'],'measurements':m['measurements'],
                        'explanation':f"Recall {m['recall_at_k']:.3f}, MRR {m['mrr']:.3f}, precision {m['precision_at_k']:.3f}; mean retrieval {m['latency_mean_ms']:.2f} ms."}})
-    result.sort(key=lambda c:(-c['optimizer']['score'],-c['metrics']['mrr'],c['metrics']['latency_mean_ms'],c['id']))
+    result.sort(key=lambda c:(-c['optimizer']['score'],-c['metrics']['mrr'],c['metrics']['latency_mean_ms'],json.dumps(c.get('config',{}),sort_keys=True),c['id']))
     return [{**c,'rank':i+1} for i,c in enumerate(result)]

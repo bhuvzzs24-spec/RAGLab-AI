@@ -2,6 +2,7 @@
 import json
 import os
 import re
+import time
 from urllib.parse import urlparse
 import httpx
 
@@ -21,7 +22,7 @@ def public_configuration():
     # Never return credential values, URL query parameters, or URL userinfo.
     parsed = urlparse(base)
     return {'configured': configured, 'model': model or None,
-            'provider_host': parsed.hostname, 'protocol': 'chat_completions'}
+            'provider_host': parsed.hostname, 'protocol': 'chat_completions','status':'configured_not_tested' if configured else 'not_configured','generation_tested':False}
 
 
 def generate(question, hits, transport=None):
@@ -43,8 +44,17 @@ def generate(question, hits, transport=None):
                'response_format': {'type': 'json_object'}, 'max_completion_tokens': 1200}
     headers = {'Authorization': 'Bearer '+key} if key else {}
     try:
+        try:retries=min(2,max(0,int(os.getenv('LLM_MAX_RETRIES','0'))))
+        except ValueError:retries=0
         with httpx.Client(timeout=httpx.Timeout(60, connect=10), transport=transport) as client:
-            response = client.post(base+'/chat/completions', headers=headers, json=payload)
+            for attempt in range(retries+1):
+                response=client.post(base+'/chat/completions',headers=headers,json=payload)
+                if response.status_code!=429 or attempt==retries:break
+                try:delay=float(response.headers.get('retry-after','1'))
+                except ValueError:break
+                if not 0<=delay<=2:break
+                time.sleep(delay)
+        # Never automatically retry ambiguous timeouts or 5xx generation requests.
         response.raise_for_status()
         body = response.json()
         choice = body['choices'][0]
@@ -80,7 +90,7 @@ def generate(question, hits, transport=None):
                                   'start': hit['start']+offset, 'end': hit['start']+offset+len(quote)})
             lines.append(text.strip()+' '+''.join(f'[{i}]' for i in sorted(set(ids))))
         return {'status': 'generated', 'answer': '\n\n'.join(lines), 'citations': citations,
-                'model': model, 'usage': body.get('usage'),
+                'model': model, 'usage': body.get('usage'),'claims':claims,
                 'grounding_note': 'Source IDs and verbatim quotes validated. Semantic support still requires human review.'}
     except httpx.HTTPStatusError as exc:
         code = exc.response.status_code
@@ -93,3 +103,26 @@ def generate(question, hits, transport=None):
         return {'status': 'invalid_provider_answer', 'answer': None, 'citations': [],
                 'message': 'Provider returned an incomplete answer or unverifiable citations. No generated answer is shown; inspect the source passages or retry.'}
     return {'status': 'provider_error', 'answer': None, 'citations': [], 'message': message}
+
+
+def probe(transport=None):
+    """Explicit opt-in provider reachability/model-list probe, not proof of generation."""
+    base,model,key,configured=configuration();public=public_configuration()
+    if not configured:return {**public,'status':'not_configured','generation_tested':False,'message':'Set server-side LLM_MODEL and LLM_API_KEY. Retrieval remains available.'}
+    parsed=urlparse(base)
+    if parsed.scheme not in ('http','https') or not parsed.hostname or parsed.username or parsed.password or parsed.query or parsed.fragment:
+        return {**public,'status':'invalid_configuration','generation_tested':False,'message':'Use a plain HTTP(S) base URL without credentials or query parameters.'}
+    try:
+        with httpx.Client(timeout=httpx.Timeout(10,connect=5),transport=transport) as client:
+            response=client.get(base+'/models',headers={'Authorization':'Bearer '+key} if key else {})
+        if response.status_code in (404,405):return {**public,'status':'probe_unsupported','generation_tested':False,'message':'Provider does not expose a compatible model list; live generation remains unverified.'}
+        response.raise_for_status();data=response.json()
+        found=any(isinstance(item,dict) and item.get('id')==model for item in data.get('data',[]))
+        return {**public,'status':'model_listed' if found else 'model_not_listed','generation_tested':False,
+                'message':'Provider is reachable and lists the configured model; run a grounded question to verify generation.' if found else 'Provider is reachable but did not list this model. Check its name and access.'}
+    except httpx.HTTPStatusError as exc:
+        status=exc.response.status_code
+        return {**public,'status':'provider_error','generation_tested':False,'http_status':status,
+                'message':{401:'Credentials rejected.',403:'Access denied.',429:'Provider rate limit or quota exceeded.'}.get(status,'Provider health request failed.')}
+    except (httpx.RequestError,ValueError,TypeError,AttributeError):
+        return {**public,'status':'provider_unreachable','generation_tested':False,'message':'Provider probe failed. Check network, API base URL and JSON protocol.'}

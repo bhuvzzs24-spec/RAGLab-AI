@@ -73,7 +73,7 @@ def analyse(run,measurements,objective=None):
         ranked.append({'config_id':c['id'],'config':c['config'],'quality':c['quality'],'latency_ms':latency,
                        'speed':speed,'score':o.accuracy_weight*c['quality']+(1-o.accuracy_weight)*speed,
                        'pareto':c['id'] in frontier,'uncertainty':uncertainty(records,run['settings']['seed'])})
-    ranked.sort(key=lambda c:(-c['score'],-c['quality'],c['latency_ms'],c['config_id']))
+    ranked.sort(key=lambda c:(-c['score'],-c['quality'],c['latency_ms'],json.dumps(c['config'],sort_keys=True),c['config_id']))
     return {'objective':o.model_dump(),'ranked':ranked,'pareto_config_ids':frontier,'eligible_configs':len(eligible),
             'excluded_by_latency':len(eligible)-len(allowed),'provisional':run['snapshot']['provisional'],
             'selection_split':run['snapshot'].get('split','all'),

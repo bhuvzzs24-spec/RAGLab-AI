@@ -30,3 +30,9 @@ The Phase 3 optimizer provided point estimates on one run; there was no held-out
 Verified safeguards include source/snapshot/model/seal checks, no selection from incomplete jobs or test analysis, cancellation before held-out launch, restart/resume, unique test reservations across dataset reimports, actual timing/cache metadata and unavailable generation metrics staying null. Data integrity is checked on disposable real-model runs. Previously existing private runtime artifacts are preserved in place; this audit does not claim to have validated private cloud-only file contents.
 
 Remaining boundaries: local single API process, no OCR or multi-user access control, tiny unreviewed sample evidence, no universal semantic-duplicate detector, no credentialed live generation run, no calibrated semantic correctness/groundedness evaluator, and no executed Docker/cloud deployment. The report and demonstration guides explicitly describe these boundaries.
+
+## Research/editorial continuation (2026-11-06)
+
+The interrupted uncommitted work and its logs were resumed, not recreated. Initial completed checks were retained; the original 61-test regression base remains in the 73-test suite. Concrete gaps fixed include backend approval/identity invalidation, audit attribution, imported attestation handling, missing human-answer review provenance, PDF work running in the API process, unbounded active resume queues, formula-unsafe textual CSV cells, transient reduced-motion fades, unnamed scatter symbols, inaccessible scroll regions and dark-theme status/heatmap contrast. All changes extend the existing engine and additive SQLite tables.
+
+No private upload, runtime database, generated index or downloaded model was staged. The actual benchmark, new-process restart, all-page/theme browser checks and remaining unavailable live-provider/Docker boundaries are recorded in RESEARCH_VERIFICATION.md.

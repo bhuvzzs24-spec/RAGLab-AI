@@ -39,3 +39,9 @@ Summarize verified engineering capabilities. Propose a separately reviewed domai
 ## Reproducibility appendix
 
 Record Git commit SHA, hardware/OS/Python/package versions, setup commands, source license, model revisions, immutable dataset fingerprint, objective weights, seed, top-k, run/search IDs, generation configuration status, cache behavior and export links. Private uploads, keys, weights, SQLite and generated FAISS files are intentionally excluded from Git.
+
+## Research/editorial upgrade evidence
+
+Use RESEARCH_VERIFICATION.md and the recorded research-upgrade JSON/CSV for the current execution. Describe explicit approval/rejection/reopen decisions, backend invalidation after content or reviewer changes, imported-flag resets, and append-only before/after provenance. Human answer correctness/claim groundedness use the documented explicit rubric; they are not automatic semantic truth. Report answer-judgment and unique-question denominators separately. No live-provider result or authentic human-reviewed sample study is claimed by the controlled test fixtures.
+
+The optional introduction is conceptual communication, not research evidence. The Pipeline Tour displays actual selected-source boundaries, vectors, retrieval and matching stored experiments with provenance. Screenshots are software demonstration artifacts over public provisional samples. Keep the distinction between a visually polished implementation and validated research claims explicit in the abstract, results and conclusion.

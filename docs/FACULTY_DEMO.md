@@ -16,3 +16,11 @@ Allow 10-15 minutes. Install dependencies and download both real models before p
 If a demonstration search already reserved the sample test questions, resume/show that completed search. Use genuinely new independent questions for another tuning study; changing dataset names or importing the same questions does not create unseen evidence. To reset only disposable demo data, use a new empty RAGLAB_DATA_DIR after stopping the API; never remove a research database.
 
 Verification artifacts in `docs/verification/` are actual execution evidence with explicit provisional labels. Report latency as host-specific. A perfect recall on three illustrative answerable test questions is not a statistical superiority result.
+
+## Research/editorial edition
+
+Use **Watch the introduction** for the short optional concept sequence, or **Launch pipeline tour** for native-scroll exploration. Explain that the concept sequence performs no fake computation. Select an actual source and a ready matching index; compare computed chunks, inspect actual PCA coordinates, perform real retrieval and inspect source-matched stored benchmarks. A frozen recommendation appears only when a completed matching adaptive search exists.
+
+In Datasets, demonstrate approve/reject/reopen, revision conflict handling, edit-driven approval revocation and before/after history on a disposable demonstration copy. Do not describe automated test-fixture attestations as human-reviewed research. Importing judgments resets review flags. Rerun descriptive benchmarks after actual human review, and use **Compare stored runs** only for compatible cohorts.
+
+In Settings, show provider model-list access checks, the explicit unconfigured state, storage integrity and artifact checks. Persist reduced motion and demonstrate keyboard Escape/focus restoration and mobile navigation. In Reports, show the new preview, private-export warning, rubric, sample counts and immutable reproducibility settings. No credentialed generation or public deployment should be claimed unless separately verified.

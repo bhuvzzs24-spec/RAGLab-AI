@@ -1,5 +1,6 @@
 """Repeatable 18-configuration benchmarks over immutable dataset snapshots."""
 import csv
+from ingestion import csv_safe
 import io
 import json
 import platform
@@ -131,6 +132,8 @@ class BenchmarkService:
             except PackageNotFoundError:metadata['packages'][package]='not-installed'
         id=str(uuid4())
         with self.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            if db.execute("SELECT count(*) FROM benchmark_runs WHERE status IN ('queued','running')").fetchone()[0]>=3:raise HTTPException(429,'Three benchmarks are already active. Cancel or finish one before queuing more.',headers={'Retry-After':'10'})
             db.execute('INSERT INTO benchmark_runs(id,dataset_id,name,snapshot,settings,status,phase) VALUES(?,?,?,?,?,?,?)',
                        (id,settings.dataset_id,settings.name.strip(),json.dumps(snapshot),json.dumps(metadata),'queued','Waiting for benchmark worker'))
             for ordinal,config in enumerate(configs_override if configs_override is not None else grid(settings)):
@@ -155,8 +158,11 @@ class BenchmarkService:
             if row['status']=='completed':raise HTTPException(409,'Completed benchmarks are immutable. Start a repeat run instead.')
             self.source_check(row['snapshot'])
             if row['settings']['model_registry']!=embeddings.MODELS:raise HTTPException(409,'Pinned model registry changed. Start a new run to avoid mixing model versions.')
-            self.update(id,status='queued',phase='Resuming missing measurements',cancel_requested=0,error=None,resume_count=row['resume_count']+1)
-            with self.connect() as db:db.execute("UPDATE benchmark_configs SET status='queued',error=NULL WHERE run_id=? AND status!='completed'",(id,))
+            with self.connect() as db:
+                db.execute('BEGIN IMMEDIATE')
+                if db.execute("SELECT count(*) FROM benchmark_runs WHERE status IN ('queued','running')").fetchone()[0]>=3:raise HTTPException(429,'Three benchmarks are already active. Finish or cancel one before resuming another.',headers={'Retry-After':'10'})
+                db.execute("UPDATE benchmark_runs SET status='queued',phase='Resuming missing measurements',cancel_requested=0,error=NULL,resume_count=?,updated=CURRENT_TIMESTAMP WHERE id=?",(row['resume_count']+1,id))
+                db.execute("UPDATE benchmark_configs SET status='queued',error=NULL WHERE run_id=? AND status!='completed'",(id,))
             if asynchronous:self.executor.submit(self.execute,id)
             else:self.execute(id)
         return self.get(id)
@@ -270,8 +276,9 @@ class BenchmarkService:
 
     def export(self,id,format):
         run=self.get(id)
+        if hasattr(self,'answer_reviews'):run['human_answer_evaluation']=self.answer_reviews.rollup(self.measurements(id))
         if format=='json':
-            body={**run,'measurements':self.measurements(id),'leaderboard':self.leaderboard(id)}
+            body={**run,'measurements':self.measurements(id),'leaderboard':self.leaderboard(id),'dataset_review_audit':[event for event in self.datasets.history(run['dataset_id']) if event['id'] in run['snapshot'].get('review_history_ids',[])]}
             return Response(json.dumps(body,indent=2),media_type='application/json',headers={'Content-Disposition':'attachment; filename="raglab-benchmark.json"'})
         if format=='pdf':
             from reports import benchmark_pdf
@@ -280,7 +287,9 @@ class BenchmarkService:
         configs={c['id']:c for c in run['configs']}
         out=io.StringIO();fields=['run_id','dataset_fingerprint','provisional','config_id','model_id','model_revision','strategy','budget','top_k','repetition','question_id','answerability','human_reviewed',
             'precision_at_k','recall_at_k','mrr','evidence_coverage','latency_ms','wall_latency_ms','indexing_time_ms','index_cache_reused','cache_hits','answer_exact_match','groundedness','generation_status']
-        writer=csv.DictWriter(out,fieldnames=fields);writer.writeheader()
+        writer=csv.DictWriter(out,fieldnames=fields,lineterminator='\n');writer.writeheader()
+        write_row=writer.writerow
+        writer.writerow=lambda row:write_row({k:csv_safe(v) for k,v in row.items()})
         for m in self.measurements(id):
             c=configs[m['config_id']]
             writer.writerow({'run_id':id,'dataset_fingerprint':run['snapshot']['fingerprint'],'provisional':run['snapshot']['provisional'],
@@ -295,6 +304,10 @@ def router(service):
     routes=APIRouter(prefix='/benchmarks',tags=['Benchmarks'])
     @routes.get('/methodology')
     def methodology():return METHODOLOGY
+    @routes.get('/compare')
+    def comparison(left:str,right:str):
+        from comparisons import compare
+        return compare(service,left,right)
     @routes.get('/runs')
     def list_runs():return service.list()
     @routes.post('/runs',status_code=202)

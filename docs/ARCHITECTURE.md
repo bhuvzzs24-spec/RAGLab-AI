@@ -73,3 +73,24 @@ flowchart LR
 ```
 
 Adaptive orchestration has its own single-thread executor; it waits on the existing benchmark executor, which delegates indexing to the existing index executor. This avoids a job waiting for itself. Cancellation is cooperative. SQLite adds `adaptive_searches` and unique `adaptive_test_reservations`; existing tables and artifacts remain in place. Dataset split/group fields live inside the existing question JSON, with legacy questions treated as unassigned. Search snapshots and selected-config seals are immutable provenance. Restart marks in-flight jobs interrupted; resume checks original sources and pinned model registry. PDF generation uses local ReportLab vector graphics over persisted measurements.
+
+## Research/editorial extension
+
+```mermaid
+flowchart LR
+    Browser[Editorial studio + optional pipeline tour] --> Guard[Body and origin boundaries]
+    Guard --> API[Existing FastAPI services]
+    API --> PDF[Bounded PDF subprocess]
+    API --> Evidence[Evidence decisions]
+    Evidence --> Audit[(Append-only review events)]
+    Audit --> Snapshot[Immutable snapshot + audit event IDs]
+    API --> Existing[Existing FAISS / embedding / benchmark engine]
+    Snapshot --> Existing
+    Existing --> Answer[Real optional provider adapter]
+    Answer --> Human[Explicit human claim rubric]
+    Human --> Reviews[(Append-only answer reviews)]
+    Reviews --> Reports[Separate as-of summaries in JSON / PDF]
+    Existing --> Reports
+```
+
+`boundaries.py`, `ingestion.py` and `pdf_extract.py` bound upload work. `answer_reviews.py` stores explicit human judgments; `comparisons.py` enforces descriptive run compatibility. The browser's optional experience modules are lazy-loaded and reuse actual API data. Motion preferences are shared through context and persisted in existing workspace settings. New review tables do not alter existing source text, model versions, vector caches, index IDs or historical measurement payloads.
