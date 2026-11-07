@@ -1,0 +1,189 @@
+{
+  "name": "Adaptive campus - UNREVIEWED CC0 sample",
+  "description": "12 illustrative questions, preassigned independent evidence groups: train 4, validation 4, test 4. All labels are provisional, never human-reviewed. No general retrieval quality claims.",
+  "sample": true,
+  "questions": [
+    {
+      "id": "development-library",
+      "question": "Where can a student borrow a microscope?",
+      "reference_answer": "The science lending desk.",
+      "split": "train",
+      "group_id": "development-library",
+      "answerability": "answerable",
+      "human_reviewed": false,
+      "annotation_origin": "sample",
+      "relevant_spans": [
+        {
+          "document_name": "adaptive-campus.txt",
+          "quote": "The science lending desk loans microscopes to enrolled students."
+        }
+      ]
+    },
+    {
+      "id": "development-solar",
+      "question": "What is the solar greenhouse heated by?",
+      "reference_answer": "Daytime heat stored in water barrels.",
+      "split": "train",
+      "group_id": "development-solar",
+      "answerability": "answerable",
+      "human_reviewed": false,
+      "annotation_origin": "sample",
+      "relevant_spans": [
+        {
+          "document_name": "adaptive-campus.txt",
+          "quote": "The solar greenhouse stores daytime heat in water barrels."
+        }
+      ]
+    },
+    {
+      "id": "development-compost",
+      "question": "What accepts vegetable scraps?",
+      "reference_answer": "The compost station.",
+      "split": "train",
+      "group_id": "development-compost",
+      "answerability": "answerable",
+      "human_reviewed": false,
+      "annotation_origin": "sample",
+      "relevant_spans": [
+        {
+          "document_name": "adaptive-campus.txt",
+          "quote": "The compost station accepts vegetable scraps but rejects plastic packaging."
+        }
+      ]
+    },
+    {
+      "id": "development-access",
+      "question": "How can a visitor request step-free access?",
+      "reference_answer": "Through the reception desk.",
+      "split": "train",
+      "group_id": "development-access",
+      "answerability": "answerable",
+      "human_reviewed": false,
+      "annotation_origin": "sample",
+      "relevant_spans": [
+        {
+          "document_name": "adaptive-campus.txt",
+          "quote": "Visitors request step-free access through the reception desk."
+        }
+      ]
+    },
+    {
+      "id": "validation-water",
+      "question": "How is the orchard irrigated?",
+      "reference_answer": "Drip irrigation fed by a covered rainwater tank.",
+      "split": "validation",
+      "group_id": "validation-water",
+      "answerability": "answerable",
+      "human_reviewed": false,
+      "annotation_origin": "sample",
+      "relevant_spans": [
+        {
+          "document_name": "adaptive-campus.txt",
+          "quote": "The orchard uses drip irrigation fed by a covered rainwater tank."
+        }
+      ]
+    },
+    {
+      "id": "validation-battery",
+      "question": "Where must damaged batteries be taken?",
+      "reference_answer": "The staffed electronics collection point.",
+      "split": "validation",
+      "group_id": "validation-battery",
+      "answerability": "answerable",
+      "human_reviewed": false,
+      "annotation_origin": "sample",
+      "relevant_spans": [
+        {
+          "document_name": "adaptive-campus.txt",
+          "quote": "Damaged batteries must be taken to the staffed electronics collection point."
+        }
+      ]
+    },
+    {
+      "id": "validation-archive",
+      "question": "How long can archive books be borrowed?",
+      "reference_answer": "Fourteen days.",
+      "split": "validation",
+      "group_id": "validation-archive",
+      "answerability": "answerable",
+      "human_reviewed": false,
+      "annotation_origin": "sample",
+      "relevant_spans": [
+        {
+          "document_name": "adaptive-campus.txt",
+          "quote": "Archive books have a loan period of fourteen days and cannot be renewed."
+        }
+      ]
+    },
+    {
+      "id": "test-shuttle",
+      "question": "What powers the campus shuttle?",
+      "reference_answer": "Rechargeable electric batteries.",
+      "split": "test",
+      "group_id": "test-shuttle",
+      "answerability": "answerable",
+      "human_reviewed": false,
+      "annotation_origin": "sample",
+      "relevant_spans": [
+        {
+          "document_name": "adaptive-campus.txt",
+          "quote": "The campus shuttle runs on rechargeable electric batteries."
+        }
+      ]
+    },
+    {
+      "id": "test-seeds",
+      "question": "At what temperature are seeds stored?",
+      "reference_answer": "Four degrees Celsius.",
+      "split": "test",
+      "group_id": "test-seeds",
+      "answerability": "answerable",
+      "human_reviewed": false,
+      "annotation_origin": "sample",
+      "relevant_spans": [
+        {
+          "document_name": "adaptive-campus.txt",
+          "quote": "The seed bank stores dry seeds at four degrees Celsius in sealed containers."
+        }
+      ]
+    },
+    {
+      "id": "test-workshop",
+      "question": "What must be worn when using the wood workshop?",
+      "reference_answer": "Safety goggles and closed-toe shoes.",
+      "split": "test",
+      "group_id": "test-workshop",
+      "answerability": "answerable",
+      "human_reviewed": false,
+      "annotation_origin": "sample",
+      "relevant_spans": [
+        {
+          "document_name": "adaptive-campus.txt",
+          "quote": "The wood workshop requires safety goggles and closed-toe shoes during tool use."
+        }
+      ]
+    },
+    {
+      "id": "validation-unanswerable",
+      "question": "What is the orchard entrance fee?",
+      "reference_answer": "",
+      "split": "validation",
+      "group_id": "validation-unanswerable",
+      "answerability": "unanswerable",
+      "human_reviewed": false,
+      "annotation_origin": "sample",
+      "relevant_spans": []
+    },
+    {
+      "id": "test-unanswerable",
+      "question": "What is the campus shuttle fare?",
+      "reference_answer": "",
+      "split": "test",
+      "group_id": "test-unanswerable",
+      "answerability": "unanswerable",
+      "human_reviewed": false,
+      "annotation_origin": "sample",
+      "relevant_spans": []
+    }
+  ]
+}

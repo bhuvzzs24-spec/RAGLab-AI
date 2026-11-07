@@ -1,0 +1,45 @@
+{
+  "date": "2026-11-05",
+  "base_commit": "480f1b74baacb02be4c1465672f5a08d59031bbd",
+  "backend": {
+    "passed": 61,
+    "failed": 0,
+    "seconds": 87.89
+  },
+  "browser": {
+    "passed": 10,
+    "failed": 0,
+    "projects": [
+      "desktop-chromium",
+      "mobile-chromium"
+    ],
+    "production_build": true
+  },
+  "frontend_build": "PASS",
+  "typecheck": "PASS",
+  "pip_check": "PASS",
+  "sqlite_integrity": "ok",
+  "foreign_key_check": "no violations",
+  "real_adaptive": {
+    "validation_configurations": 18,
+    "validation_measurements": 144,
+    "held_out_configurations": 1,
+    "held_out_measurements": 8,
+    "repeat_validation_measurements": 144,
+    "quality_reproduced": true,
+    "human_reviewed_labels": false
+  },
+  "reports": {
+    "formats": [
+      "pdf",
+      "csv",
+      "json"
+    ],
+    "pdf_visual_inspection": true,
+    "page_bounds_checked": true
+  },
+  "live_llm": "NOT TESTED: no credentials",
+  "semantic_groundedness": "NOT EVALUATED",
+  "docker_execution": "NOT TESTED: Docker unavailable",
+  "compose_yaml_structure": "PASS"
+}

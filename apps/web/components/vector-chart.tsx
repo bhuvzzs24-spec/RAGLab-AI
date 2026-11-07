@@ -1,0 +1,12 @@
+'use client';
+import {useState} from 'react';
+import {motion} from 'framer-motion';
+import {useMotionSafety} from './motion-preferences';
+import type {Projection,Point} from './pipeline-types';
+const colors=['#241426','#FF5A0A','#400849','#FF5A0A','#A33400'];
+export default function VectorChart({projection,onPoint}:{projection:Projection;onPoint:(point:Point)=>void}){
+ const reduced=useMotionSafety(),[active,setActive]=useState<Point|null>(null),names=Array.from(new Set(projection.points.map(p=>p.document_id)));
+ const xs=projection.points.map(p=>p.x),ys=projection.points.map(p=>p.y);const minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys);
+ const x=(v:number)=>35+(maxX===minX?.5:(v-minX)/(maxX-minX))*430,y=(v:number)=>270-(maxY===minY?.5:(v-minY)/(maxY-minY))*235;
+ return <figure className="vector-chart actual-vector-chart"><svg viewBox="0 0 500 310" role="group" aria-label={`PCA projection of ${projection.sampled} real embedding vectors. Points can be opened with Enter.`}><line x1="35" x2="470" y1="270" y2="270"/><line x1="35" x2="35" y1="30" y2="270"/>{[.25,.5,.75].map(t=><path key={t} d={`M ${35+t*430} 30 V270 M35 ${270-t*235} H470`} className="vector-grid"/>)}<text x="235" y="302">PC1 · {minX.toFixed(2)} to {maxX.toFixed(2)}</text><text x="40" y="20">PC2 · {minY.toFixed(2)} to {maxY.toFixed(2)}</text>{projection.points.map(p=><motion.circle key={p.stable_id||`${p.document_id}:${p.ordinal}`} cx={x(p.x)} cy={y(p.y)} r={7} initial={false} animate={{cx:x(p.x),cy:y(p.y),opacity:1}} transition={{duration:reduced?0:.55,ease:'easeOut'}} fill={colors[names.indexOf(p.document_id)%colors.length]} role="button" tabIndex={0} aria-label={`Open passage ${p.ordinal+1} from ${p.source_name}, pages ${p.page_numbers.join(', ')}`} onClick={()=>onPoint(p)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();onPoint(p)}}} onMouseEnter={()=>setActive(p)} onMouseLeave={()=>setActive(null)} onFocus={()=>setActive(p)} onBlur={()=>setActive(null)}><title>{p.source_name} · passage {p.ordinal+1}</title></motion.circle>)}</svg>{active&&<div className="vector-caption" role="status">{active.source_name} · passage {active.ordinal+1} · page {active.page_numbers.join(', ')} · {active.tokens} model tokens</div>}<figcaption>Actual PCA coordinates. Matching source spans keep stable identities across models; independent projections do not share a semantic coordinate system.</figcaption></figure>
+}

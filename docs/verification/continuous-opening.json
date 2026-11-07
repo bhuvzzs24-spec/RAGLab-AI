@@ -1,0 +1,47 @@
+{
+  "scope": "Focused frontend text, palette and continuous-scroll correction; no backend/research code, schema, model or benchmark changes.",
+  "canvas": {
+    "wording": [
+      "RAGLAB AI",
+      "RETRIEVE. EVALUATE. OPTIMIZE."
+    ],
+    "subtitle": "Adaptive RAG Benchmarking & Optimization",
+    "method": "Licensed original SSR document retained intact; allowlisted headline text/ink, title and background substitutions only.",
+    "verification": "Actual Canvas fillText calls recorded; no demo strings in rendered srcDoc; reverse substitutions exactly reproduce original document SHA-256. Actual hover/hold Canvas frame changes verified."
+  },
+  "scroll": {
+    "root": "One hero and one existing Studio on the same native scroll page",
+    "entry": "#workspace; native smooth scroll, immediate for Skip/reduced motion",
+    "reveal": "Overlapping rounded inset mask expands to full width; no pinning or wheel prevention",
+    "state": "Single Studio DOM instance retained during forward/reverse scrolling",
+    "sidebar": "Sticky embedded desktop sidebar with native scroll chaining; existing mobile drawer",
+    "resources": "Canvas iframe absent when hero is offscreen and restored on reverse scroll"
+  },
+  "palette": {
+    "plum": "#120715",
+    "eggplant": "#400849",
+    "orchid": "#E7B0DE",
+    "orange": "#FF5A0A",
+    "background": "#F7F0F5",
+    "cards": "#FFFBFD"
+  },
+  "checks": {
+    "production_build": "PASS",
+    "typecheck": "PASS",
+    "browser_unique_cases_passed": 18,
+    "method": "Initial unaffected navigation/API cases plus final focused Canvas/scroll/palette reruns; real mobile touch scroll separately verified. No claim of one clean all-case run.",
+    "viewports": [
+      "1440x1000",
+      "834x1112",
+      "390x844"
+    ],
+    "automated_wcag_aa": "PASS for reduced-motion continuous page on all three sizes",
+    "native_browser": "Customized Canvas inspected; normal down/up scrolling revealed the real workspace at unchanged root URL; iframe removal/restoration observed.",
+    "routes": "Root plus all eleven existing workspace routes; direct Overview, Back, sidebar, Enter Workspace, Pipeline Tour and real API reconnect checked.",
+    "costly_ml_benchmarks": "NOT RUN; unnecessary for this frontend-only correction"
+  },
+  "limitations": [
+    "Safari/Firefox and physical trackpad hardware not separately tested; Chromium wheel, keyboard and genuine touch inputs verified.",
+    "No research data was reconstructed or invented."
+  ]
+}

@@ -1,0 +1,60 @@
+{
+  "component": "@designcodeio/threeui@1.2.0 GalleryHeading",
+  "props": {
+    "variant": "vertical-loop",
+    "mode": "dark",
+    "font": "didone",
+    "weight": "400",
+    "headlineSize": 1.25,
+    "hue": 0,
+    "saturation": 1,
+    "brightness": 1
+  },
+  "registered_source_sha256": {
+    "NeuformIsolatedEffects.tsx": "fe9856234253bc3c1a13b3afb84f3d84644dfa6d578e7203bb3e1dd5eced1b75",
+    "gallery-heading.html": "8e42d2d5b4971bfc4d3c485112c3c51909e20a61b8842bc0dcd8db3ffe2d253a",
+    "threeui.css": "efe4447139f1358dd8e9be68edf6fa46cbefbd1de423a4d6c439ca61d2c8eccf"
+  },
+  "integrity": "All registered files verified; published package canonical source also matches. Official component unchanged; approved internal sandboxed iframe. MIT notice retained.",
+  "transition_ms": {
+    "desktop_tablet": 780,
+    "mobile": 380,
+    "reduced_motion": 0,
+    "skip_intro": 0
+  },
+  "verification": {
+    "production_build": "PASS",
+    "typecheck": "PASS",
+    "api_tests_passed": 9,
+    "browser_unique_cases_passed": 18,
+    "browser_method": "17 passed in the full focused run; corrected mobile interaction exercised the authored touch-and-hold input and passed in its targeted rerun. Expanded API reconnection checks then passed on all three viewports.",
+    "viewports": [
+      "1440x1000",
+      "834x1112",
+      "390x844"
+    ],
+    "real_canvas": "Real pointer hover / sustained touch; actual Canvas frame data changed. Stop/replay and route-unmount verified.",
+    "accessibility": "Reduced-motion landing automated WCAG A/AA checks passed on all three viewports.",
+    "routes": [
+      "/",
+      "/overview",
+      "/documents",
+      "/chunking",
+      "/embeddings",
+      "/datasets",
+      "/benchmarks",
+      "/experiments",
+      "/leaderboard",
+      "/playground",
+      "/reports",
+      "/settings"
+    ],
+    "native_browser": "Official composition inspected in the in-app browser; Enter Workspace, Back and Explore Pipeline verified; Local API connected visibly confirmed."
+  },
+  "limitations": [
+    "No costly ML benchmarks rerun for this frontend-only change.",
+    "Live provider Q&A and Safari/Firefox not tested.",
+    "Previous temporary runtime was absent at recovery; original archived databases left untouched; restored local runtime uses its own persistent data directory.",
+    "Third-party shared CSS emits non-fatal existing gradient syntax warnings."
+  ]
+}

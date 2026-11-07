@@ -1,0 +1,58 @@
+{
+  "date": "2026-11-06",
+  "base_commit": "5db4acf248eb63ab3cb528769afb31ea2c2f0f8b",
+  "backend_tests": {
+    "passed": 73,
+    "failed": 0
+  },
+  "browser_tests": {
+    "startTime": "2026-11-06T03:11:49.778Z",
+    "duration": 188042.868,
+    "expected": 22,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "production_build": "PASS",
+  "typecheck": "PASS",
+  "dependency_check": "PASS",
+  "axe_version": "4.14.0",
+  "a11y": {
+    "pages": 11,
+    "themes": [
+      "light",
+      "dark"
+    ],
+    "viewports": [
+      "desktop",
+      "mobile"
+    ],
+    "observed_violations": 0,
+    "scope": "Automated WCAG A/AA tags and exercised states; not a complete conformance certification."
+  },
+  "real_benchmark": {
+    "search_id": "72a60f85-d1f5-44c1-a7ed-c4df35dae36e",
+    "validation_run_id": "78b56ee8-4464-4a44-9d4d-c6cb6841b9d6",
+    "test_run_id": "1bd6f323-c54f-4fde-b330-5539f87d202a",
+    "validation_configurations": 18,
+    "validation_measurements": 144,
+    "held_out_configurations": 1,
+    "held_out_measurements": 8,
+    "repeat_validation_measurements": 144,
+    "quality_reproduced": true,
+    "reviewed_sample_labels": false,
+    "restart": {
+      "new_python_process": true,
+      "persisted_configurations": 18,
+      "persisted_measurements": 144,
+      "persisted_review_events": 12,
+      "source_labels_still_unreviewed": true,
+      "fresh_retrieval_hits": 2,
+      "sqlite_integrity": "ok"
+    }
+  },
+  "llm_live": "NOT TESTED - credentials/model not configured",
+  "docker_execution": "NOT TESTED - Docker unavailable",
+  "public_deployment": "NOT DEPLOYED",
+  "fixture_policy": "Approval and answer-rubric tests use explicit controlled fixtures; they are never claimed as genuine human-reviewed research."
+}
