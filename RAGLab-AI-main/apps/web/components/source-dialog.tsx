@@ -1,0 +1,10 @@
+'use client';
+import {useEffect,useRef,useState} from 'react';
+import {X,FileText} from 'lucide-react';
+import {request,type Hit} from './pipeline-types';
+type Source={name:string;start:number;end:number;pages:{page:number;text:string;highlight_start:number;highlight_end:number;offset:number;excerpted?:boolean}[]};
+export default function SourceDialog({hit,onClose,quoteRange}:{hit:Hit;onClose:()=>void;quoteRange?:{start:number;end:number}}){
+ const ref=useRef<HTMLDialogElement>(null),[source,setSource]=useState<Source|null>(null),[error,setError]=useState('');
+ useEffect(()=>{setSource(null);setError('');ref.current?.showModal();const controller=new AbortController();request<Source>(hit.source_url,{signal:controller.signal}).then(setSource).catch(e=>{if(!controller.signal.aborted)setError(e.message)});return()=>controller.abort()},[hit.source_url]);
+ return <dialog className="source-dialog" ref={ref} aria-labelledby="source-title" onCancel={onClose} onClick={e=>{if(e.target===e.currentTarget)onClose()}}><div className="source-dialog-inner"><div className="section-title"><div><span className="eyebrow">ORIGINAL EXTRACTED SOURCE</span><h3 id="source-title"><FileText size={17}/>{source?.name||hit.source_name}</h3></div><button className="icon" onClick={onClose} aria-label="Close source preview" autoFocus><X/></button></div><p className="help">Source characters {quoteRange?.start??source?.start??hit.start}–{quoteRange?.end??source?.end??hit.end} · highlighted in context</p>{error&&<div className="alert" role="alert">{error}</div>}{!source&&!error?<div className="skeleton"/>:source?.pages.map(p=>{const a=quoteRange?Math.max(0,Math.min(Array.from(p.text).length,quoteRange.start-p.offset)):p.highlight_start;const b=quoteRange?Math.max(a,Math.min(Array.from(p.text).length,quoteRange.end-p.offset)):p.highlight_end;return <section className="source-page" key={p.page}><small>PAGE {p.page}{p.excerpted?' · EXCERPT AROUND PASSAGE':''}</small><pre>{Array.from(p.text).slice(0,a).join('')}<mark>{Array.from(p.text).slice(a,b).join('')}</mark>{Array.from(p.text).slice(b).join('')}</pre></section>})}</div></dialog>
+}

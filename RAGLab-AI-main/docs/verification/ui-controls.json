@@ -1,0 +1,49 @@
+{
+  "scope": "11 existing pages plus Pipeline Tour; targeted fixes, no dependency changes",
+  "interaction_issues_fixed": [
+    "Theme toggle reset on navigation",
+    "Chunk preview retained obsolete parameters or late responses",
+    "Three-strategy comparison retained obsolete parameters or late responses",
+    "New dataset could discard an unsaved draft",
+    "Sample loading could discard an unsaved draft",
+    "Dataset import could discard an unsaved draft",
+    "Empty dataset selection retained the previous editor",
+    "Export failures replaced the workspace with a raw API error",
+    "Provider configuration failures were swallowed",
+    "Index Inspect gave no visible navigation feedback",
+    "Pipeline Tour launcher was hidden on mobile outside Overview",
+    "Tour retrieval errors were offscreen and late responses could use an obsolete index",
+    "Reduced-motion changes did not update active interactions"
+  ],
+  "backend": {
+    "passed": 73
+  },
+  "frontend": {
+    "build": "PASS",
+    "typecheck": "PASS"
+  },
+  "browser": {
+    "unique_passed_cases": 38,
+    "existing_cases": 22,
+    "focused_cases": 16,
+    "projects": [
+      "desktop-chromium",
+      "mobile-chromium"
+    ],
+    "method": "Existing 22 cases passed in the initial suite. Focused 16 cases passed after selector/fixture corrections in targeted reruns; no claim of one clean 38-case run.",
+    "coverage": [
+      "real upload and preview",
+      "real MiniLM build/inspect/rebuild and source highlight",
+      "real retrieval and missing-provider feedback",
+      "real 18-configuration benchmark cancel/resume, filters, comparisons and exports",
+      "real adaptive held-out search",
+      "CSV/JSON/PDF downloads and failure recovery",
+      "all eleven routes light/dark WCAG A/AA automated scans",
+      "tour native scroll and live reduced-motion changes"
+    ]
+  },
+  "limitations": [
+    "No live LLM credentials: generation remains NOT TESTED.",
+    "Automated accessibility checks do not constitute full WCAG certification."
+  ]
+}
