@@ -1,0 +1,13 @@
+{
+  "name": "Campus & retrieval — provisional CC0 sample",
+  "description": "Six illustrative questions over original CC0 documents. Annotations are unreviewed examples authored for demonstration; no human review is claimed. Review the source evidence before using these as research judgments.",
+  "sample": true,
+  "questions": [
+    {"id":"sample-energy","question":"Where can students borrow energy meters?","reference_answer":"The campus library.","answerability":"answerable","human_reviewed":false,"annotation_origin":"sample","relevant_spans":[{"document_name":"campus-guide.txt","quote":"The campus library lends energy meters to students."}]},
+    {"id":"sample-return","question":"When should borrowed energy meters be returned?","reference_answer":"Within seven days.","answerability":"answerable","human_reviewed":false,"annotation_origin":"sample","relevant_spans":[{"document_name":"campus-guide.txt","quote":"Return meters to the library desk within seven days."}]},
+    {"id":"sample-garden","question":"How does the community garden collect water and reduce evaporation?","reference_answer":"It collects rainwater in covered tanks and volunteers water plants early in the morning.","answerability":"answerable","human_reviewed":false,"annotation_origin":"sample","relevant_spans":[{"document_name":"campus-guide.txt","quote":"The community garden collects rainwater in covered tanks."},{"document_name":"campus-guide.txt","quote":"Volunteers water plants early in the morning to reduce evaporation."}]},
+    {"id":"sample-overlap","question":"What is the trade-off of chunk overlap?","reference_answer":"Overlap preserves context but increases index size.","answerability":"answerable","human_reviewed":false,"annotation_origin":"sample","relevant_spans":[{"document_name":"retrieval-notes.md","quote":"Overlap preserves context but increases index size."}]},
+    {"id":"sample-unanswerable-hours","question":"At what time does the campus library close on Sundays?","reference_answer":"","answerability":"unanswerable","human_reviewed":false,"annotation_origin":"sample","relevant_spans":[]},
+    {"id":"sample-unanswerable-cost","question":"What is the campus bicycle rental price per month?","reference_answer":"","answerability":"unanswerable","human_reviewed":false,"annotation_origin":"sample","relevant_spans":[]}
+  ]
+}
