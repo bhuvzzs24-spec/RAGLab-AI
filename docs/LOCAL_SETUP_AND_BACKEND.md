@@ -309,17 +309,25 @@ The backend tests cover areas including:
 
 ### Recorded automated test result
 
-A previous full backend run on the Windows PDF compatibility
-contribution branch completed with:
+A fresh full backend test run was completed on Windows from the
+`feat/rams-backend-reliability` branch using Python 3.13.17 and
+pytest 9.2.0.
 
+Command:
+
+```powershell
+python -m pytest -v .\apps\api\tests
+```
+
+Result:
+
+- 73 tests collected.
 - 73 tests passed.
 - 0 tests failed.
-- 1 warning.
-- Execution time: approximately 630.62 seconds.
+- 1 warning (deprecated `fitz` API; use `pymupdf` in future).
+- Execution time: 1984.34 seconds (33 minutes, 4 seconds).
 
-This result was recorded before the compatibility fix was merged into
-`main`. Re-run the suite on the current branch when performing a fresh
-release verification.
+All 73 tests passed successfully in this verification run.
 
 ## 12. Live Windows backend verification
 
