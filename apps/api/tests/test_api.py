@@ -57,6 +57,27 @@ def test_pdf_pages(client):
     d=r.json();assert d['name']=='sample.pdf';assert len(d['pages'])==2
     assert 'Second page text' in d['text']
 
+
+def test_encrypted_pdf_rejected(client):
+    pdf = fitz.open()
+    pdf.new_page()
+
+    encrypted = pdf.tobytes(
+        encryption=fitz.PDF_ENCRYPT_AES_256,
+        owner_pw='owner',
+        user_pw='user'
+    )
+    pdf.close()
+
+    response = client.post(
+        '/documents',
+        files={'file': ('encrypted.pdf', encrypted, 'application/pdf')}
+    )
+
+    assert response.status_code == 422
+    assert 'encrypted' in response.text.lower()
+
+
 def test_persistence_and_cascade(client):
     id=add(client)
     config={'document_id':id,'budget':8,'overlap':2,'name':'test'}
