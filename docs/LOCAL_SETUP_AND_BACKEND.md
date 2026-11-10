@@ -320,6 +320,7 @@ python -m pytest -v .\apps\api\tests
 ```
 
 
+
 Result:
 
 - 74 tests collected.
@@ -328,8 +329,8 @@ Result:
 - 1 warning (deprecated `fitz` API in an existing test; use `pymupdf` in future).
 - Execution time: 991.06 seconds (16 minutes, 31 seconds).
 
-All 74 tests passed successfully in this verification run,
-including the encrypted-PDF rejection test.
+All 74 tests passed successfully in this verification run, including the encrypted-PDF rejection test.
+
 
 
 ## 12. Live Windows backend verification
